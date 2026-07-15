@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sanbox — Central Financeira</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{--or:#F5A623;--od:#D4881A;--bg:#F2F5F9;--wh:#fff;--bd:#E2E8F0;--tx:#1A1F2E;--mu:#7A8799;--dm:#E2E8F0;--gr:#16A34A;--re:#DC2626;--sh:0 1px 8px rgba(0,0,0,.07);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--od),var(--or),#FFC85A,var(--or));z-index:99;}
+
+/* LOADING */
+#ov{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.lb-w{width:260px;height:5px;background:var(--dm);border-radius:9px;overflow:hidden;}
+.lb{height:100%;background:var(--or);width:0%;transition:width .3s;}
+.lt{font-size:.7rem;font-weight:700;color:var(--mu);letter-spacing:.15em;text-transform:uppercase;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.pulse{animation:pulse 1.4s ease-in-out infinite;}
+
+/* TABS */
+.app{min-height:100vh;display:flex;flex-direction:column;}
+.tabbar{display:flex;gap:5px;padding:10px 18px 0;background:var(--bg);position:sticky;top:4px;z-index:90;flex-wrap:wrap;}
+.tab{background:var(--wh);border:1px solid var(--bd);border-radius:8px 8px 0 0;padding:6px 16px;font:800 .65rem 'Nunito';color:var(--mu);cursor:pointer;border-bottom:none;transition:all .15s;}
+.tab.on{background:var(--or);border-color:var(--or);color:#fff;}
+.tab.soon{opacity:.5;cursor:not-allowed;}
+.content{flex:1;padding:0 18px 18px;}
+
+/* PANEL */
+.panel{display:none;flex-direction:column;gap:9px;padding-top:10px;}
+.panel.on{display:flex;}
+
+/* CARD */
+.card{background:var(--wh);border:1px solid var(--bd);border-radius:11px;padding:11px 14px;box-shadow:var(--sh);}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;justify-content:space-between;}
+.brand{display:flex;align-items:center;gap:10px;}
+.bsep{width:1px;height:24px;background:var(--bd);}
+.bsub{font-size:.58rem;font-weight:800;color:var(--mu);letter-spacing:.2em;text-transform:uppercase;}
+.hc{text-align:center;}
+.dlbl{font-size:.56rem;font-weight:800;color:var(--mu);letter-spacing:.15em;text-transform:uppercase;}
+.dval{font-family:'Bebas Neue';font-size:.95rem;color:var(--od);}
+.hr{display:flex;align-items:center;gap:10px;}
+.live{display:flex;align-items:center;gap:5px;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3);padding:3px 10px;border-radius:999px;font-size:.58rem;font-weight:800;color:var(--od);}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--or);animation:sonar 2s ease-in-out infinite;}
+@keyframes sonar{0%{box-shadow:0 0 0 0 rgba(245,166,35,.5);}70%{box-shadow:0 0 0 8px rgba(245,166,35,0);}100%{box-shadow:0 0 0 0 rgba(245,166,35,0);}}
+.clock{font-family:'Bebas Neue';font-size:1.7rem;color:var(--od);}
+.btn-sm{background:none;border:1px solid var(--bd);border-radius:6px;padding:3px 9px;font:800 .58rem 'Nunito';color:var(--mu);cursor:pointer;}
+.btn-sm:hover{border-color:var(--or);color:var(--or);}
+
+/* KPIs */
+.kr{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.kpi{background:var(--wh);border:1px solid var(--bd);border-radius:11px;padding:11px 14px;box-shadow:var(--sh);position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kc,var(--or));}
+.kl{font-size:.56rem;font-weight:800;color:var(--mu);letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px;}
+.kv{font-family:'Bebas Neue';font-size:2rem;line-height:1;color:var(--kc,var(--od));margin-bottom:3px;}
+.ks{font-size:.6rem;font-weight:700;color:var(--mu);}
+
+/* ANÁLISE TABLES */
+.atitle{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.atit{font-size:.58rem;font-weight:900;color:var(--mu);letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
+.atit::after{content:'';width:40px;height:1px;background:var(--dm);}
+.pdot{width:5px;height:5px;border-radius:50%;background:var(--or);}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:.68rem;}
+thead th{padding:6px 10px;text-align:right;font-size:.56rem;font-weight:900;color:var(--mu);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;border-bottom:2px solid var(--bd);background:var(--wh);position:sticky;top:0;z-index:2;}
+thead th:first-child{text-align:left;position:sticky;left:0;z-index:3;}
+tbody tr{border-bottom:1px solid var(--bg);}
+tbody tr:hover{background:var(--bg);}
+tbody td{padding:5px 10px;text-align:right;font-size:.68rem;font-weight:700;color:var(--tx);white-space:nowrap;font-variant-numeric:tabular-nums;}
+tbody td:first-child{text-align:left;position:sticky;left:0;background:var(--wh);z-index:1;}
+tbody tr:hover td:first-child{background:var(--bg);}
+tfoot td{padding:6px 10px;text-align:right;font-size:.68rem;font-weight:800;color:var(--tx);background:var(--bg);white-space:nowrap;font-variant-numeric:tabular-nums;}
+tfoot td:first-child{text-align:left;position:sticky;left:0;background:var(--bg);z-index:1;}
+tfoot tr.sep td{border-top:2px solid var(--bd);}
+tfoot tr.recv td{color:var(--gr);}
+.col-tot{background:rgba(245,166,35,.06);}
+.val-z{color:var(--dm);}
+.cok{color:var(--gr)!important;}.cmid{color:var(--od)!important;}.clow{color:var(--re)!important;}
+
+/* MOBILE */
+@media(max-width:768px){
+  .bsub,.bsep,.hc{display:none;}
+  .kr{grid-template-columns:1fr 1fr;}
+  .kr .kpi:first-child{grid-column:1/3;}
+  .clock{font-size:1.3rem;}
+  .hdr{flex-wrap:wrap;gap:6px;}
+}
+@media(max-width:420px){.kr{grid-template-columns:1fr;}.kr .kpi:first-child{grid-column:1;}}
+#err{display:none;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:10px;padding:12px 16px;font-size:.72rem;font-weight:700;}
+</style>
+</head>
+<body>
+
+<div id="ov">
+  <svg class="pulse" height="50" viewBox="0 0 210 58" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="56" height="56" rx="12" fill="#F5A623"/>
+    <rect x="11" y="11" width="34" height="34" rx="7" fill="white"/>
+    <rect x="19" y="20" width="13" height="7" rx="2" fill="#F5A623"/>
+    <text x="66" y="43" font-family="Nunito" font-weight="900" font-size="36" fill="#1A1A1A">san</text>
+    <text x="130" y="43" font-family="Nunito" font-weight="900" font-size="36" fill="#F5A623">box</text>
+  </svg>
+  <div class="lb-w"><div class="lb" id="lb"></div></div>
+  <div class="lt" id="lt">Iniciando...</div>
+</div>
+
+<div class="app" id="app" style="display:none">
+  <div class="tabbar">
+    <button class="tab on" onclick="aba('vCR',this)">💰 Contas a Receber</button>
+    <button class="tab soon" title="Em breve">🧾 Contas a Pagar</button>
+    <button class="tab soon" title="Em breve">📈 DRE</button>
+    <button class="tab soon" title="Em breve">🏦 Fluxo de Caixa</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ CONTAS A RECEBER ══════════════════════════════════════ -->
+    <div class="panel on" id="vCR">
+      <div class="card hdr">
+        <div class="brand">
+          <svg height="32" viewBox="0 0 210 58" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="56" height="56" rx="12" fill="#F5A623"/>
+            <rect x="11" y="11" width="34" height="34" rx="7" fill="white"/>
+            <rect x="19" y="20" width="13" height="7" rx="2" fill="#F5A623"/>
+            <text x="66" y="43" font-family="Nunito" font-weight="900" font-size="36" fill="#1A1A1A">san</text>
+            <text x="130" y="43" font-family="Nunito" font-weight="900" font-size="36" fill="#F5A623">box</text>
+          </svg>
+          <div class="bsep"></div><div class="bsub">Central Financeira</div>
+        </div>
+        <div class="hc"><div class="dlbl">Referência</div><div class="dval" id="dRef">--</div></div>
+        <div class="hr">
+          <button class="btn-sm" onclick="load()">⟳ Atualizar</button>
+          <div class="live"><div class="dot"></div><span>AO VIVO</span></div>
+          <div class="clock" id="clock">--:--:--</div>
+        </div>
+      </div>
+
+      <div id="err"></div>
+
+      <div class="kr">
+        <div class="kpi" style="--kc:var(--or)">
+          <div class="kl">A Receber (Em Aberto)</div><div class="kv" id="kAberto">R$ --</div>
+          <div class="ks" id="kAbertoSub">--</div>
+        </div>
+        <div class="kpi" style="--kc:var(--gr)">
+          <div class="kl">Recebido no Período</div><div class="kv" id="kReceb">R$ --</div>
+          <div class="ks">coluna Recebido</div>
+        </div>
+        <div class="kpi" style="--kc:var(--od)">
+          <div class="kl">Total a Receber (Bruto)</div><div class="kv" id="kBruto" style="font-size:1.7rem">R$ --</div>
+          <div class="ks">Saldo + Recebido</div>
+        </div>
+        <div class="kpi" style="--kc:var(--re)">
+          <div class="kl">% Atraso Geral</div><div class="kv" id="kPct">--%</div>
+          <div class="ks">Saldo / Total a Receber</div>
+        </div>
+        <div class="kpi" style="--kc:#64748b">
+          <div class="kl">Contas em Aberto</div><div class="kv" id="kQtd" style="font-size:1.7rem">--</div>
+          <div class="ks">nº de títulos</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="atitle">
+          <div class="atit"><div class="pdot"></div>Fechamento — Recebimentos por Forma × Mês (a partir de Jan/26)</div>
+          <div class="dlbl" id="tStatus">--</div>
+        </div>
+        <div class="tscroll">
+          <div id="crTbWrap"><div class="lt" style="padding:30px;text-align:center">Carregando Contas a Receber...</div></div>
+        </div>
+        <div class="ks" style="margin-top:8px;color:var(--mu);line-height:1.5">
+          <b>Linhas por forma:</b> soma do <b>Saldo</b> apenas de contas com situação <b>"Aberto"</b>, pelo mês da <b>data de vencimento</b>.<br>
+          <b>Total a Receber</b> = Σ (Saldo + Recebido) de todas as contas do mês &nbsp;·&nbsp; <b>Recebido</b> = Σ Recebido &nbsp;·&nbsp; <b>% Atraso</b> = (Total a Receber − Recebido) ÷ Total a Receber.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="atitle">
+          <div class="atit"><div class="pdot"></div>Em Aberto por Marcador × Mês (a partir de Jan/26)</div>
+        </div>
+        <div class="tscroll">
+          <div id="marcTbWrap"><div class="lt" style="padding:24px;text-align:center">Carregando marcadores...</div></div>
+        </div>
+        <div class="ks" style="margin-top:8px;color:var(--mu);line-height:1.5">
+          Soma do <b>Saldo</b> apenas de contas com situação <b>"Aberto"</b>, agrupado pelo <b>Marcador</b> (coluna L) e pelo mês da <b>data de vencimento</b>. Contas sem marcador entram como <b>"S/Marcador"</b>.
+        </div>
+      </div>
+
+    </div><!-- /vCR -->
+  </div>
+</div>
+
+<script>
+// ═══════════════════════ CONFIG ═══════════════════════
+const KEY    = 'AIzaSyCpFaibN_ct8r2ywjIlKByvZkxok5ytqXI';
+const CR_ID  = '1iZgpIyu0n7Vtmqid7NelE540YgbSgSE7r9N4drCGxDg';
+const CR_ABA = 'Contas a Receber';
+const START_YM = '2026-01';               // a partir de Janeiro/2026
+const MESNOME = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+// ═══════════════════════ HELPERS ═══════════════════════
+// Número no padrão BR: "1.234,56" -> 1234.56 ; "574,9" -> 574.9 ; "" -> 0
+function num(s){
+  if(s==null) return 0;
+  s=(''+s).trim(); if(!s) return 0;
+  s=s.replace(/\s/g,'').replace(/\./g,'').replace(',','.');
+  const n=parseFloat(s); return isNaN(n)?0:n;
+}
+// Data -> 'YYYY-MM' (aceita ISO 2026-08-14T... ou BR 14/08/2026) ; senão null
+function ym(s){
+  if(!s) return null; s=(''+s).trim();
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);          if(m) return m[1]+'-'+m[2];
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);         if(m) return m[3]+'-'+String(m[2]).padStart(2,'0');
+  return null;
+}
+function R(v){ return 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function Rk(v){ // compacto para KPI
+  v=v||0; if(Math.abs(v)>=1e6) return 'R$ '+(v/1e6).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' mi';
+  if(Math.abs(v)>=1e3) return 'R$ '+(v/1e3).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' mil';
+  return R(v);
+}
+function P(v){ return (isFinite(v)?(v*100):0).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%'; }
+function mesLabel(k){ const[y,m]=k.split('-'); return MESNOME[+m]+'/'+y.slice(2); }
+function setLoad(p,t){ const lb=document.getElementById('lb'); if(lb)lb.style.width=p+'%'; if(t)document.getElementById('lt').textContent=t; }
+
+function aba(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById(id).classList.add('on'); btn.classList.add('on');
+}
+
+// ═══════════════════════ FETCH ═══════════════════════
+async function fetchSheet(range){
+  const enc=encodeURIComponent(`'${CR_ABA}'!${range}`);
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${CR_ID}/values/${enc}?key=${KEY}`);
+  const d=await r.json();
+  if(d.error) throw new Error(d.error.message);
+  return d.values||[];
+}
+
+// ═══════════════════════ LOAD + AGREGA ═══════════════════════
+async function load(){
+  const errEl=document.getElementById('err'); errEl.style.display='none';
+  document.getElementById('crTbWrap').innerHTML='<div class="lt" style="padding:30px;text-align:center">Carregando Contas a Receber...</div>';
+  try{
+    setLoad(20,'Buscando contas...');
+    // Colunas B..L -> [0]=Situação(B) [1]=Vencimento(C) [2]=Liquidação(D) [3]=Valor(E) [4]=Saldo(F) [5]=Vlr liq(G) [6]=Recebido(H) [7]=Forma(I) [8]=Categoria(J) [9]=Histórico(K) [10]=Marcador(L)
+    const rows=await fetchSheet('B1:L');
+    setLoad(70,'Processando...');
+
+    const formasSet=new Set(), marcSet=new Set();
+    const cell={};                                   // cell[forma][ym]    = Σ saldo (aberto)
+    const cellM={};                                  // cellM[marcador][ym] = Σ saldo (aberto)
+    const totReceber={}, totReceb={}, totAtraso={};  // por mês
+    const mesesSet=new Set();
+    let gAberto=0, gReceb=0, gBruto=0, gQtd=0;
+
+    for(const r of rows){
+      const situ=(r[0]||'').trim().toLowerCase();
+      const k=ym(r[1]); if(!k || k<START_YM) continue;
+      const saldo=num(r[4]), receb=num(r[6]);
+      const forma=((r[7]||'').trim())||'(Sem forma)';
+      const marc =((r[10]||'').trim())||'S/Marcador';
+      mesesSet.add(k);
+
+      // rodapé: TODAS as contas do mês
+      totReceber[k]=(totReceber[k]||0)+saldo+receb;
+      totReceb[k]  =(totReceb[k]  ||0)+receb;
+      gBruto+=saldo+receb; gReceb+=receb;
+
+      // linhas por forma / marcador: somente "Aberto"
+      if(situ==='aberto'){
+        formasSet.add(forma);
+        (cell[forma]=cell[forma]||{})[k]=(cell[forma][k]||0)+saldo;
+        totAtraso[k]=(totAtraso[k]||0)+saldo;
+        marcSet.add(marc);
+        (cellM[marc]=cellM[marc]||{})[k]=(cellM[marc][k]||0)+saldo;
+        gAberto+=saldo; gQtd++;
+      }
+    }
+
+    const meses=[...mesesSet].sort();
+    const formas=[...formasSet].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    // marcadores em ordem alfabética, com "S/Marcador" sempre por último
+    const marcs=[...marcSet].sort((a,b)=>{
+      if(a==='S/Marcador') return 1; if(b==='S/Marcador') return -1;
+      return a.localeCompare(b,'pt-BR');
+    });
+
+    renderTabela(meses,formas,cell,totReceber,totReceb,totAtraso);
+    renderMarcador(meses,marcs,cellM,totAtraso);
+
+    // KPIs
+    document.getElementById('kAberto').textContent=Rk(gAberto);
+    document.getElementById('kAbertoSub').textContent=meses.length?('em '+formas.length+' formas · '+meses.length+' meses'):'—';
+    document.getElementById('kReceb').textContent=Rk(gReceb);
+    document.getElementById('kBruto').textContent=Rk(gBruto);
+    const pctG=gBruto>0?(gBruto-gReceb)/gBruto:0;
+    const kp=document.getElementById('kPct'); kp.textContent=P(pctG);
+    kp.className='kv '+(pctG>=.5?'clow':pctG>=.25?'cmid':'cok'); kp.style.color='';
+    document.getElementById('kQtd').textContent=gQtd.toLocaleString('pt-BR');
+
+    document.getElementById('tStatus').textContent=rows.length.toLocaleString('pt-BR')+' títulos lidos';
+    document.getElementById('dRef').textContent=meses.length?(mesLabel(meses[0])+' → '+mesLabel(meses[meses.length-1])):'—';
+    setLoad(100,'Pronto');
+    setTimeout(()=>{document.getElementById('ov').style.display='none';document.getElementById('app').style.display='flex';},250);
+  }catch(e){
+    document.getElementById('ov').style.display='none';document.getElementById('app').style.display='flex';
+    const errEl=document.getElementById('err');
+    errEl.style.display='block';
+    errEl.textContent='Erro ao carregar dados: '+e.message+'  — verifique se a planilha está acessível pela API key.';
+    document.getElementById('crTbWrap').innerHTML='';
+  }
+}
+
+// ═══════════════════════ RENDER TABELA ═══════════════════════
+function renderTabela(meses,formas,cell,totReceber,totReceb,totAtraso){
+  if(!meses.length){
+    document.getElementById('crTbWrap').innerHTML='<div class="lt" style="padding:30px;text-align:center">Nenhuma conta encontrada a partir de Jan/26.</div>';
+    return;
+  }
+  const tdZ=v=>v>0?`<td>${R(v)}</td>`:`<td class="val-z">—</td>`;
+
+  // header
+  let h='<thead><tr><th>Forma de Recebimento</th>';
+  meses.forEach(k=>h+=`<th>${mesLabel(k)}</th>`);
+  h+='<th class="col-tot">Total</th></tr></thead>';
+
+  // body — formas
+  let b='<tbody>';
+  formas.forEach(f=>{
+    let tot=0;
+    b+=`<tr><td>${f}</td>`;
+    meses.forEach(k=>{ const v=(cell[f]&&cell[f][k])||0; tot+=v; b+=tdZ(v); });
+    b+=`<td class="col-tot">${R(tot)}</td></tr>`;
+  });
+  b+='</tbody>';
+
+  // footer
+  const sum=o=>meses.reduce((a,k)=>a+(o[k]||0),0);
+  const tAtr=sum(totAtraso), tRec=sum(totReceber), tRcb=sum(totReceb);
+  let f='<tfoot>';
+  // Total (Atraso) = soma das formas (aberto)
+  f+='<tr class="sep"><td>Total (Atraso)</td>';
+  meses.forEach(k=>f+=`<td>${R(totAtraso[k]||0)}</td>`);
+  f+=`<td class="col-tot">${R(tAtr)}</td></tr>`;
+  // Total a Receber
+  f+='<tr><td>Total a Receber</td>';
+  meses.forEach(k=>f+=`<td>${R(totReceber[k]||0)}</td>`);
+  f+=`<td class="col-tot">${R(tRec)}</td></tr>`;
+  // Recebido
+  f+='<tr class="recv"><td>Recebido</td>';
+  meses.forEach(k=>f+=`<td>${R(totReceb[k]||0)}</td>`);
+  f+=`<td class="col-tot">${R(tRcb)}</td></tr>`;
+  // % Atraso
+  f+='<tr><td>% Atraso</td>';
+  meses.forEach(k=>{ const tr=totReceber[k]||0, pc=tr>0?(tr-(totReceb[k]||0))/tr:0;
+    const cls=pc>=.5?'clow':pc>=.25?'cmid':'cok'; f+=`<td class="${cls}">${P(pc)}</td>`; });
+  const pcG=tRec>0?(tRec-tRcb)/tRec:0;
+  f+=`<td class="col-tot ${pcG>=.5?'clow':pcG>=.25?'cmid':'cok'}">${P(pcG)}</td></tr>`;
+  f+='</tfoot>';
+
+  document.getElementById('crTbWrap').innerHTML=`<table>${h}${b}${f}</table>`;
+}
+
+// ═══════════════════════ RENDER MARCADOR ═══════════════════════
+// Em Aberto (Saldo, situação "Aberto") por Marcador × Mês. Vazio -> "S/Marcador".
+function renderMarcador(meses,marcs,cellM,totAtraso){
+  if(!meses.length || !marcs.length){
+    document.getElementById('marcTbWrap').innerHTML='<div class="lt" style="padding:24px;text-align:center">Nenhuma conta em aberto com marcador a partir de Jan/26.</div>';
+    return;
+  }
+  const tdZ=v=>v>0?`<td>${R(v)}</td>`:`<td class="val-z">—</td>`;
+
+  let h='<thead><tr><th>Marcador</th>';
+  meses.forEach(k=>h+=`<th>${mesLabel(k)}</th>`);
+  h+='<th class="col-tot">Total</th></tr></thead>';
+
+  let b='<tbody>';
+  marcs.forEach(mc=>{
+    let tot=0;
+    b+=`<tr><td>${mc}</td>`;
+    meses.forEach(k=>{ const v=(cellM[mc]&&cellM[mc][k])||0; tot+=v; b+=tdZ(v); });
+    b+=`<td class="col-tot">${R(tot)}</td></tr>`;
+  });
+  b+='</tbody>';
+
+  // rodapé Total = mesmo total em aberto por mês (soma dos marcadores == Total Atraso)
+  const sum=o=>meses.reduce((a,k)=>a+(o[k]||0),0);
+  let f='<tfoot><tr class="sep"><td>Total em Aberto</td>';
+  meses.forEach(k=>f+=`<td>${R(totAtraso[k]||0)}</td>`);
+  f+=`<td class="col-tot">${R(sum(totAtraso))}</td></tr></tfoot>`;
+
+  document.getElementById('marcTbWrap').innerHTML=`<table>${h}${b}${f}</table>`;
+}
+
+// ═══════════════════════ CLOCK ═══════════════════════
+function tick(){ const d=new Date(); document.getElementById('clock').textContent=d.toLocaleTimeString('pt-BR'); }
+setInterval(tick,1000); tick();
+
+// start
+load();
+</script>
+</body>
+</html>
