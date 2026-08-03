@@ -2,1405 +2,406 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Conciliador de Comissões — Marketplaces</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sanbox — Central Financeira</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
-  :root{--azul:#1F4E79;--azul2:#2E6DA4;--verde:#1e7e34;--verm:#C00000;--cinza:#f4f6f9;--borda:#d9dee5}
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,Helvetica,sans-serif;background:var(--cinza);color:#222;padding:24px}
-  .wrap{max-width:1100px;margin:0 auto}
-  h1{color:var(--azul);font-size:22px;margin-bottom:4px}
-  .sub{color:#666;font-size:13px;margin-bottom:20px}
-  .card{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:18px;margin-bottom:16px}
-  .card h2{font-size:15px;color:var(--azul);margin-bottom:12px}
-  .drop{border:2px dashed var(--borda);border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:.15s;font-size:13px;color:#555}
-  .drop:hover,.drop.over{border-color:var(--azul2);background:#eef4fa}
-  .drop.ok{border-color:var(--verde);background:#effaf1}
-  .drop b{display:block;color:var(--azul);font-size:14px;margin-bottom:4px}
-  input[type=file]{display:none}
-  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
-  select,button,input[type=text],input[type=url]{font-family:inherit;font-size:13px;padding:9px 10px;border-radius:7px;border:1px solid var(--borda)}
-  input[type=url]{flex:1;min-width:260px}
-  button{background:var(--azul);color:#fff;border:none;cursor:pointer;font-weight:bold;padding:9px 14px;font-size:14px}
-  button:hover{background:var(--azul2)}
-  button:disabled{background:#b9c4d0;cursor:not-allowed}
-  button.sec{background:#fff;color:var(--azul);border:1px solid var(--azul);font-weight:normal;font-size:13px}
-  button.sec:hover{background:#eef4fa}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-  .kpi{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:14px;text-align:center}
-  .kpi .v{font-size:24px;font-weight:bold;color:var(--azul)}
-  .kpi.red .v{color:var(--verm)}
-  .kpi.green .v{color:var(--verde)}
-  .kpi .l{font-size:12px;color:#777;margin-top:3px}
-  table{width:100%;border-collapse:collapse;font-size:12.5px}
-  th{background:var(--azul);color:#fff;padding:8px 6px;text-align:left;position:sticky;top:0}
-  td{padding:6px;border-bottom:1px solid #eee;white-space:nowrap}
-  tr:nth-child(even) td{background:#f8fafc}
-  .num{text-align:right}
-  .dif{color:var(--verm);font-weight:bold}
-  .tbl{max-height:460px;overflow:auto;border:1px solid var(--borda);border-radius:8px}
-  .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-  .tab{padding:7px 14px;border-radius:7px 7px 0 0;background:#e6ebf1;cursor:pointer;font-size:13px;border:1px solid var(--borda);border-bottom:none}
-  .tab.on{background:#fff;color:var(--azul);font-weight:bold}
-  .tab .badge{background:var(--azul2);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:5px}
-  .msg{padding:10px 14px;border-radius:7px;font-size:13px;margin-top:10px;display:none}
-  .msg.err{display:block;background:#fdeaea;color:var(--verm);border:1px solid #f2c4c4}
-  .msg.ok{display:block;background:#eaf7ee;color:var(--verde);border:1px solid #bfe3c8}
-  .msg.info{display:block;background:#eef4fa;color:var(--azul);border:1px solid #c4d7ea}
-  .hidden{display:none}
-  .rules{font-size:12px;color:#777;line-height:1.6;margin-top:8px}
-  .canalTag{background:#eef4fa;color:var(--azul);border:1px solid var(--azul2);border-radius:14px;padding:4px 12px;font-size:13px;font-weight:bold}
-  .status{font-size:13px;margin-top:10px;color:#444}
-  .status .on{color:var(--verde);font-weight:bold}
-  #topnav{max-width:1100px;margin:0 auto 16px;display:flex;gap:4px;border-bottom:2px solid var(--borda)}
-  #topnav .topbtn{background:none;border:none;border-bottom:3px solid transparent;color:#777;font:bold 15px Arial;padding:12px 20px;cursor:pointer;margin-bottom:-2px}
-  #topnav .topbtn:hover{color:var(--azul2)}
-  #topnav .topbtn.on{color:var(--azul);border-bottom-color:var(--azul)}
-  #view-difal iframe,#view-difal2 iframe{width:100%;border:0;min-height:100vh;display:block}
-</style>
-</head>
-<body>
-<div id="topnav">
-  <button class="topbtn on" id="tabConc" onclick="mostrarView('conc')">Conciliador de Comissões</button>
-  <button class="topbtn" id="tabDifal" onclick="mostrarView('difal')">Conferência DIFAL</button>
-  <button class="topbtn" id="tabDifal2" onclick="mostrarView('difal2')">Arquivo DIFAL</button>
-  <a class="topbtn" id="btnResultados" href="https://docs.google.com/spreadsheets/d/1PnY48rqw9ACYKUGQ2V_1SGMVcCE-97BiOaFEJlQP5bo/edit?gid=907230061#gid=907230061" target="_blank" rel="noopener" style="margin-left:auto;color:var(--verde);text-decoration:none">📊 Planilha de resultados ↗</a>
-</div>
-<div id="view-conc">
-<div class="wrap">
-  <h1>Conciliador de Comissões — Marketplaces</h1>
-  <div class="sub">As comissões negociadas são lidas automaticamente da sua planilha online (OneDrive). Você só preenche a planilha — aqui, é só subir o repasse do Koncili.</div>
-
-  <div class="card">
-    <h2>1. Planilha online — Comissões Negociadas</h2>
-    <div class="row" style="margin-top:0" id="linkRow">
-      <input type="url" id="linkInp" placeholder="Cole aqui o link da planilha de comissões (Google Sheets ou OneDrive)">
-      <button onclick="conectar(true)">Conectar</button>
-    </div>
-    <div class="status hidden" id="statusRow">
-      <span class="on">● Conectada</span> <span id="statusTxt"></span>
-      <button class="sec" style="margin-left:10px" onclick="conectar(true)">🔄 Atualizar agora</button>
-      <button class="sec" onclick="trocarLink()">Trocar link</button>
-    </div>
-    <div class="tabs hidden" id="canalTabs" style="margin-top:12px"></div>
-    <div class="tbl hidden" id="regrasBox" style="max-height:240px"><table id="regrasTbl"></table></div>
-    <div class="rules">Configuração (uma vez só): <b>Google Sheets</b> → Compartilhar → Acesso geral: "Qualquer pessoa com o link" (Leitor) → Copiar link · <b>OneDrive</b> → botão direito no arquivo → Compartilhar → "Qualquer pessoa com o link pode exibir" → Copiar link. As abas da planilha precisam se chamar <b>Amazon</b>, <b>Casas Bahia</b> e <b>Magazine Luiza</b> (colunas SKU | Comissão | Inicio | Fim). Para o Casas Bahia, a aba <b>Pedidos Casas Bahia</b> (colunas DATA | Pedido | SKU) traduz o nº do pedido do repasse no seu SKU real. O app relê a planilha toda vez que é aberto. <span style="color:#999">Sem link? <a href="#" onclick="document.getElementById('fCom').click();return false">carregar o arquivo manualmente</a>.</span><input type="file" id="fCom" accept=".xlsx,.xls"></div>
-    <div class="row" id="hookRow" style="margin-top:6px">
-      <input type="url" id="hookInp" placeholder="Link do webhook (Apps Script) — salva os resultados no Google Sheets automaticamente">
-      <button class="sec" onclick="salvarHook()">Salvar webhook</button>
-      <button class="sec" onclick="testarHook()">Testar</button>
-      <a class="sec" href="https://docs.google.com/spreadsheets/d/1PnY48rqw9ACYKUGQ2V_1SGMVcCE-97BiOaFEJlQP5bo/edit?gid=907230061#gid=907230061" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">📊 Abrir planilha de resultados</a>
-      <span id="hookStatus" style="font-size:12px;color:#888"></span>
-    </div>
-    <div class="msg" id="msgCom"></div>
-  </div>
-
-  <div class="card">
-    <h2>2. Planilha de repasse (Koncili)</h2>
-    <div class="drop" id="dropRep" onclick="document.getElementById('fRep').click()">
-      <b>📄 Clique ou arraste o arquivo .xlsx aqui</b>
-      <span id="repName">O canal será identificado automaticamente pela coluna A (Marketplace)</span>
-      <input type="file" id="fRep" accept=".xlsx,.xls">
-    </div>
-    <div class="row hidden" id="canalRow">
-      <span style="font-size:13px;color:#444">Canal identificado:</span>
-      <span class="canalTag" id="canalTag"></span>
-      <select id="canalSel" class="hidden"></select>
-      <button id="btnRun" onclick="rodar()">Conciliar</button>
-    </div>
-    <div class="rules">Regras por canal: <b>Amazon</b> (repasse settlement) → % cobrado = |Commission| ÷ (Principal − |Promoção|), agrupado por pedido+SKU · <b>Casas Bahia</b> (repasse nativo Via) → coluna <b>Comissão Aplicada %</b> direto, com <b>SKU Lojista</b> · <b>Magalu</b> (Koncili) → |Comissão| ÷ (Valor bruto − |Campanhas|) · período pela <b>Data do pedido</b> · tolerância de 0,01 p.p. · quando <b>% cobrado &lt; negociado</b> vai para a aba "Cobrado a menos"; a principal mostra só <b>cobrado a mais</b>.</div>
-    <div class="msg" id="msg"></div>
-  </div>
-
-  <div id="resultado" class="hidden">
-    <div class="cards">
-      <div class="kpi"><div class="v" id="kTotal">0</div><div class="l">Pedidos no período</div></div>
-      <div class="kpi green"><div class="v" id="kOk">0</div><div class="l">Conformes</div></div>
-      <div class="kpi red"><div class="v" id="kMais">0</div><div class="l">Cobrado a mais</div></div>
-      <div class="kpi"><div class="v" id="kMenos">0</div><div class="l">Cobrado a menos</div></div>
-      <div class="kpi"><div class="v" id="kDev">0</div><div class="l">Devoluções/estornos</div></div>
-      <div class="kpi red"><div class="v" id="kImp">R$ 0</div><div class="l">Total cobrado a mais</div></div>
-    </div>
-    <div class="card">
-      <div class="tabs">
-        <div class="tab on" id="tabM" onclick="verAba('M')">Cobrado a mais</div>
-        <div class="tab" id="tabm" onclick="verAba('m')">Cobrado a menos</div>
-        <div class="tab" id="tabV" onclick="verAba('V')">Devoluções/Estornos</div>
-      </div>
-      <div class="tbl"><table id="tabela"></table></div>
-      <div class="row">
-        <button onclick="exportar()">⬇️ Exportar relatório (.xlsx)</button>
-        <button class="sec" onclick="baixarApp()">Compartilhar: baixar app já conectado</button>
-        <span style="font-size:12px;color:#888" id="expInfo"></span>
-      </div>
-    </div>
-  </div>
-</div>
-</div><!-- /view-conc -->
-<div id="view-difal" style="display:none">
-  <iframe id="difalFrame" title="Conferência DIFAL" srcdoc="<!DOCTYPE html>
-<html lang=&quot;pt-BR&quot;>
-<head>
-<meta charset=&quot;UTF-8&quot; />
-<meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1&quot; />
-<title>Sanbox — Fechamento ICMS DIFAL</title>
-<link href=&quot;https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&amp;family=Bebas+Neue&amp;display=swap&quot; rel=&quot;stylesheet&quot;>
-<script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js&quot;></script>
-<style>
-:root{--or:#F5A623;--od:#D4881A;--bg:#F2F5F9;--wh:#fff;--bd:#E2E8F0;--tx:#1A1F2E;--mu:#7A8799;--dm:#E2E8F0;--gr:#16A34A;--re:#DC2626;--vi:#7C5CFF;--sh:0 1px 8px rgba(0,0,0,.07);}
+:root{--or:#F5A623;--od:#D4881A;--bg:#F2F5F9;--wh:#fff;--bd:#E2E8F0;--tx:#1A1F2E;--mu:#7A8799;--dm:#E2E8F0;--gr:#16A34A;--re:#DC2626;--sh:0 1px 8px rgba(0,0,0,.07);}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);}
 body::before{content:'';position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--od),var(--or),#FFC85A,var(--or));z-index:99;}
+
+/* LOADING */
+#ov{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.lb-w{width:260px;height:5px;background:var(--dm);border-radius:9px;overflow:hidden;}
+.lb{height:100%;background:var(--or);width:0%;transition:width .3s;}
+.lt{font-size:.7rem;font-weight:700;color:var(--mu);letter-spacing:.15em;text-transform:uppercase;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.pulse{animation:pulse 1.4s ease-in-out infinite;}
+
+/* TABS */
 .app{min-height:100vh;display:flex;flex-direction:column;}
-.content{flex:1;padding:14px 18px 22px;display:flex;flex-direction:column;gap:9px;max-width:1280px;margin:0 auto;width:100%;}
+.tabbar{display:flex;gap:5px;padding:10px 18px 0;background:var(--bg);position:sticky;top:4px;z-index:90;flex-wrap:wrap;}
+.tab{background:var(--wh);border:1px solid var(--bd);border-radius:8px 8px 0 0;padding:6px 16px;font:800 .65rem 'Nunito';color:var(--mu);cursor:pointer;border-bottom:none;transition:all .15s;}
+.tab.on{background:var(--or);border-color:var(--or);color:#fff;}
+.tab.soon{opacity:.5;cursor:not-allowed;}
+.content{flex:1;padding:0 18px 18px;}
+
+/* PANEL */
+.panel{display:none;flex-direction:column;gap:9px;padding-top:10px;}
+.panel.on{display:flex;}
 
 /* CARD */
-.card{background:var(--wh);border:1px solid var(--bd);border-radius:11px;padding:12px 15px;box-shadow:var(--sh);}
+.card{background:var(--wh);border:1px solid var(--bd);border-radius:11px;padding:11px 14px;box-shadow:var(--sh);}
 
 /* HEADER */
-.hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.hdr{display:flex;align-items:center;justify-content:space-between;}
 .brand{display:flex;align-items:center;gap:10px;}
 .bsep{width:1px;height:24px;background:var(--bd);}
 .bsub{font-size:.58rem;font-weight:800;color:var(--mu);letter-spacing:.2em;text-transform:uppercase;}
 .hc{text-align:center;}
 .dlbl{font-size:.56rem;font-weight:800;color:var(--mu);letter-spacing:.15em;text-transform:uppercase;}
-.dval{font-family:'Bebas Neue';font-size:1.05rem;color:var(--od);letter-spacing:.03em;}
+.dval{font-family:'Bebas Neue';font-size:.95rem;color:var(--od);}
 .hr{display:flex;align-items:center;gap:10px;}
 .live{display:flex;align-items:center;gap:5px;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3);padding:3px 10px;border-radius:999px;font-size:.58rem;font-weight:800;color:var(--od);}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--or);animation:sonar 2s ease-in-out infinite;}
 @keyframes sonar{0%{box-shadow:0 0 0 0 rgba(245,166,35,.5);}70%{box-shadow:0 0 0 8px rgba(245,166,35,0);}100%{box-shadow:0 0 0 0 rgba(245,166,35,0);}}
 .clock{font-family:'Bebas Neue';font-size:1.7rem;color:var(--od);}
-.btn-sm{background:none;border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font:800 .58rem 'Nunito';color:var(--mu);cursor:pointer;}
+.btn-sm{background:none;border:1px solid var(--bd);border-radius:6px;padding:3px 9px;font:800 .58rem 'Nunito';color:var(--mu);cursor:pointer;}
 .btn-sm:hover{border-color:var(--or);color:var(--or);}
 
-/* SECTION TITLE */
-.atit{font-size:.58rem;font-weight:900;color:var(--mu);letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:9px;}
-.atit::after{content:'';flex:1;height:1px;background:var(--dm);}
-.pdot{width:5px;height:5px;border-radius:50%;background:var(--or);}
-
-/* DROPZONE */
-#drop{border:2px dashed var(--bd);border-radius:10px;padding:26px 18px;text-align:center;cursor:pointer;transition:.15s;background:var(--bg);}
-#drop.drag{border-color:var(--or);background:rgba(245,166,35,.06);}
-#drop .big{font-size:.82rem;font-weight:800;color:var(--tx);}
-#drop .big b{color:var(--od);}
-#drop .hint{color:var(--mu);font-size:.64rem;font-weight:700;margin-top:5px;}
-.filechip{margin-top:11px;font-size:.68rem;font-weight:800;color:var(--gr);background:rgba(22,163,74,.07);border:1px solid rgba(22,163,74,.25);padding:7px 12px;border-radius:8px;display:none;}
-
-/* CONFIG GRID */
-.grid2{display:grid;grid-template-columns:1fr 1.4fr;gap:9px;}
-@media(max-width:820px){.grid2{grid-template-columns:1fr;}}
-.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:11px;}
-.flbl{font-size:.58rem;font-weight:800;color:var(--mu);letter-spacing:.12em;text-transform:uppercase;}
-select{border:1px solid var(--bd);border-radius:6px;padding:5px 10px;font:800 .72rem 'Nunito';background:var(--wh);color:var(--tx);}
-.switch{display:flex;align-items:center;gap:9px;}
-input[type=checkbox]{width:17px;height:17px;accent-color:var(--or);cursor:pointer;}
-.switch label{font-size:.7rem;font-weight:700;color:var(--tx);cursor:pointer;}
-.formula{font-size:.66rem;font-weight:700;color:var(--mu);margin-top:4px;line-height:1.6;}
-.formula code{background:var(--bg);border:1px solid var(--bd);padding:1px 6px;border-radius:5px;color:var(--od);font-weight:800;}
-
-/* BUTTONS */
-.btn{cursor:pointer;border:none;border-radius:8px;font:900 .7rem 'Nunito';padding:9px 18px;transition:.15s;letter-spacing:.03em;text-transform:uppercase;}
-.btn-primary{background:var(--or);color:#fff;}
-.btn-primary:hover{background:var(--od);}
-.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
-.btn-dl{background:var(--gr);color:#fff;}
-.btn-dl:hover{filter:brightness(.94);}
-.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-.status{font-size:.66rem;font-weight:700;color:var(--mu);}
-
-/* RATES */
-.rates{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:7px;}
-.rate{background:var(--bg);border:1px solid var(--bd);border-radius:7px;padding:5px 8px;display:flex;align-items:center;justify-content:space-between;}
-.rate span{font-size:.66rem;font-weight:900;color:var(--mu);}
-.rate input{width:46px;background:transparent;border:none;border-bottom:1px solid var(--bd);color:var(--tx);text-align:right;font:800 .72rem 'Nunito';padding:1px 0;}
-.rate input:focus{outline:none;border-color:var(--or);}
-.rate.origin{border-color:var(--or);background:rgba(245,166,35,.08);}
-.rate.origin span{color:var(--od);}
-
 /* KPIs */
-.kr{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-@media(max-width:820px){.kr{grid-template-columns:1fr 1fr;}}
-@media(max-width:440px){.kr{grid-template-columns:1fr;}}
-.kpi{background:var(--wh);border:1px solid var(--bd);border-radius:11px;padding:12px 15px;box-shadow:var(--sh);position:relative;overflow:hidden;}
+.kr{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.kpi{background:var(--wh);border:1px solid var(--bd);border-radius:11px;padding:11px 14px;box-shadow:var(--sh);position:relative;overflow:hidden;}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kc,var(--or));}
-.kl{font-size:.56rem;font-weight:800;color:var(--mu);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px;}
-.kv{font-family:'Bebas Neue';font-size:2rem;line-height:1;color:var(--kc,var(--od));margin-bottom:3px;letter-spacing:.02em;}
+.kl{font-size:.56rem;font-weight:800;color:var(--mu);letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px;}
+.kv{font-family:'Bebas Neue';font-size:2rem;line-height:1;color:var(--kc,var(--od));margin-bottom:3px;}
 .ks{font-size:.6rem;font-weight:700;color:var(--mu);}
 
-/* TABLE */
-.tscroll{overflow:auto;max-height:460px;}
-table{width:100%;border-collapse:collapse;font-size:.7rem;}
-thead th{padding:6px 10px;text-align:right;font-size:.56rem;font-weight:900;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;border-bottom:2px solid var(--bd);position:sticky;top:0;background:var(--wh);z-index:2;}
-thead th:first-child{text-align:left;}
+/* ANÁLISE TABLES */
+.atitle{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.atit{font-size:.58rem;font-weight:900;color:var(--mu);letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
+.atit::after{content:'';width:40px;height:1px;background:var(--dm);}
+.pdot{width:5px;height:5px;border-radius:50%;background:var(--or);}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:.68rem;}
+thead th{padding:6px 10px;text-align:right;font-size:.56rem;font-weight:900;color:var(--mu);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;border-bottom:2px solid var(--bd);background:var(--wh);position:sticky;top:0;z-index:2;}
+thead th:first-child{text-align:left;position:sticky;left:0;z-index:3;}
 tbody tr{border-bottom:1px solid var(--bg);}
 tbody tr:hover{background:var(--bg);}
-tbody td{padding:6px 10px;text-align:right;font-size:.7rem;font-weight:700;color:var(--tx);}
-tbody td:first-child{text-align:left;font-weight:900;}
-tfoot tr{border-top:2px solid var(--bd);}
-tfoot td{padding:7px 10px;text-align:right;font-size:.72rem;font-weight:900;color:var(--tx);background:var(--bg);}
-tfoot td:first-child{text-align:left;}
-.pill{font-size:.56rem;font-weight:800;padding:2px 7px;border-radius:99px;background:rgba(245,166,35,.1);color:var(--od);}
+tbody td{padding:5px 10px;text-align:right;font-size:.68rem;font-weight:700;color:var(--tx);white-space:nowrap;font-variant-numeric:tabular-nums;}
+tbody td:first-child{text-align:left;position:sticky;left:0;background:var(--wh);z-index:1;}
+tbody tr:hover td:first-child{background:var(--bg);}
+tfoot td{padding:6px 10px;text-align:right;font-size:.68rem;font-weight:800;color:var(--tx);background:var(--bg);white-space:nowrap;font-variant-numeric:tabular-nums;}
+tfoot td:first-child{text-align:left;position:sticky;left:0;background:var(--bg);z-index:1;}
+tfoot tr.sep td{border-top:2px solid var(--bd);}
+tfoot tr.recv td{color:var(--gr);}
+.col-tot{background:rgba(245,166,35,.06);}
+.val-z{color:var(--dm);}
+.cok{color:var(--gr)!important;}.cmid{color:var(--od)!important;}.clow{color:var(--re)!important;}
 
-/* WARN */
-.warn{background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.35);color:var(--od);padding:10px 13px;border-radius:8px;font-size:.68rem;font-weight:700;display:none;margin-top:10px;}
-
-/* TICKER */
-.tk{background:var(--wh);border:1px solid var(--bd);border-radius:8px;padding:5px 12px;overflow:hidden;white-space:nowrap;box-shadow:var(--sh);}
-.ti{display:inline-block;animation:tick 34s linear infinite;font-size:.66rem;font-weight:700;color:var(--mu);}
-.ti .hi{color:var(--od);font-weight:900;}.ti .sp{color:var(--bd);margin:0 12px;}
-@keyframes tick{from{transform:translateX(100%);}to{transform:translateX(-100%);}}
-
-.hidden{display:none;}
-.foot{color:var(--mu);font-size:.6rem;font-weight:700;text-align:center;margin-top:12px;line-height:1.8;}
+/* MOBILE */
+@media(max-width:768px){
+  .bsub,.bsep,.hc{display:none;}
+  .kr{grid-template-columns:1fr 1fr;}
+  .kr .kpi:first-child{grid-column:1/3;}
+  .clock{font-size:1.3rem;}
+  .hdr{flex-wrap:wrap;gap:6px;}
+}
+@media(max-width:420px){.kr{grid-template-columns:1fr;}.kr .kpi:first-child{grid-column:1;}}
+#err{display:none;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:10px;padding:12px 16px;font-size:.72rem;font-weight:700;}
 </style>
 </head>
 <body>
-<div class=&quot;app&quot;>
-  <div class=&quot;content&quot;>
 
-    <!-- HEADER -->
-    <div class=&quot;card hdr&quot;>
-      <div class=&quot;brand&quot;>
-        <svg height=&quot;30&quot; viewBox=&quot;0 0 210 58&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;>
-          <rect x=&quot;0&quot; y=&quot;0&quot; width=&quot;56&quot; height=&quot;56&quot; rx=&quot;12&quot; fill=&quot;#F5A623&quot;/>
-          <rect x=&quot;11&quot; y=&quot;11&quot; width=&quot;34&quot; height=&quot;34&quot; rx=&quot;7&quot; fill=&quot;white&quot;/>
-          <rect x=&quot;19&quot; y=&quot;20&quot; width=&quot;13&quot; height=&quot;7&quot; rx=&quot;2&quot; fill=&quot;#F5A623&quot;/>
-          <text x=&quot;66&quot; y=&quot;43&quot; font-family=&quot;Nunito&quot; font-weight=&quot;900&quot; font-size=&quot;36&quot; fill=&quot;#1A1A1A&quot;>san</text>
-          <text x=&quot;130&quot; y=&quot;43&quot; font-family=&quot;Nunito&quot; font-weight=&quot;900&quot; font-size=&quot;36&quot; fill=&quot;#F5A623&quot;>box</text>
-        </svg>
-        <div class=&quot;bsep&quot;></div><div class=&quot;bsub&quot;>Fechamento ICMS DIFAL</div>
-      </div>
-      <div class=&quot;hc&quot;><div class=&quot;dlbl&quot;>Origem</div><div class=&quot;dval&quot; id=&quot;dRef&quot;>ES · 17%</div></div>
-      <div class=&quot;hr&quot;>
-        <div class=&quot;live&quot;><div class=&quot;dot&quot;></div><span>PROCESSAMENTO LOCAL</span></div>
-        <div class=&quot;clock&quot; id=&quot;clock&quot;>--:--:--</div>
-      </div>
-    </div>
+<div id="ov">
+  <svg class="pulse" height="50" viewBox="0 0 210 58" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="56" height="56" rx="12" fill="#F5A623"/>
+    <rect x="11" y="11" width="34" height="34" rx="7" fill="white"/>
+    <rect x="19" y="20" width="13" height="7" rx="2" fill="#F5A623"/>
+    <text x="66" y="43" font-family="Nunito" font-weight="900" font-size="36" fill="#1A1A1A">san</text>
+    <text x="130" y="43" font-family="Nunito" font-weight="900" font-size="36" fill="#F5A623">box</text>
+  </svg>
+  <div class="lb-w"><div class="lb" id="lb"></div></div>
+  <div class="lt" id="lt">Iniciando...</div>
+</div>
 
-    <!-- UPLOAD -->
-    <div class=&quot;card&quot;>
-      <div class=&quot;atit&quot;><div class=&quot;pdot&quot;></div>1 · Arquivo da remessa</div>
-      <div id=&quot;drop&quot;>
-        <div class=&quot;big&quot;>Arraste o arquivo <b>.xls / .xlsx</b> aqui ou <b>clique para escolher</b></div>
-        <div class=&quot;hint&quot;>Relatório de Notas Fiscais por Operação (Olist / ERP)</div>
-        <input type=&quot;file&quot; id=&quot;file&quot; accept=&quot;.xls,.xlsx&quot; class=&quot;hidden&quot; />
-      </div>
-      <div class=&quot;filechip&quot; id=&quot;filechip&quot;></div>
-    </div>
+<div class="app" id="app" style="display:none">
+  <div class="tabbar">
+    <button class="tab on" onclick="aba('vCR',this)">💰 Contas a Receber</button>
+    <button class="tab soon" title="Em breve">🧾 Contas a Pagar</button>
+    <button class="tab soon" title="Em breve">📈 DRE</button>
+    <button class="tab soon" title="Em breve">🏦 Fluxo de Caixa</button>
+  </div>
 
-    <!-- CONFIG -->
-    <div class=&quot;grid2&quot;>
-      <div class=&quot;card&quot;>
-        <div class=&quot;atit&quot;><div class=&quot;pdot&quot;></div>2 · Parâmetros</div>
-        <div class=&quot;row&quot;><span class=&quot;flbl&quot;>Estado de origem</span><select id=&quot;origin&quot;></select></div>
-        <div class=&quot;row switch&quot;>
-          <input type=&quot;checkbox&quot; id=&quot;zero&quot; checked />
-          <label for=&quot;zero&quot;>Zerar ICMS ST em devoluções e vendas internas (destino = origem)</label>
+  <div class="content">
+
+    <!-- ══ CONTAS A RECEBER ══════════════════════════════════════ -->
+    <div class="panel on" id="vCR">
+      <div class="card hdr">
+        <div class="brand">
+          <svg height="32" viewBox="0 0 210 58" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="56" height="56" rx="12" fill="#F5A623"/>
+            <rect x="11" y="11" width="34" height="34" rx="7" fill="white"/>
+            <rect x="19" y="20" width="13" height="7" rx="2" fill="#F5A623"/>
+            <text x="66" y="43" font-family="Nunito" font-weight="900" font-size="36" fill="#1A1A1A">san</text>
+            <text x="130" y="43" font-family="Nunito" font-weight="900" font-size="36" fill="#F5A623">box</text>
+          </svg>
+          <div class="bsep"></div><div class="bsub">Central Financeira</div>
         </div>
-        <p class=&quot;formula&quot;>
-          <code>ICMS ST = Base ICMS × alíq. destino − ICMS</code> · valores negativos zerados ·
-          <code>ICMS Total = ICMS + ICMS ST</code>
-        </p>
-      </div>
-      <div class=&quot;card&quot;>
-        <div class=&quot;atit&quot;><div class=&quot;pdot&quot;></div>3 · Alíquotas internas por UF (%) — editável
-          <button class=&quot;btn-sm&quot; id=&quot;reset&quot; style=&quot;text-transform:none;letter-spacing:0&quot;>⟳ Restaurar 2026</button>
+        <div class="hc"><div class="dlbl">Referência</div><div class="dval" id="dRef">--</div></div>
+        <div class="hr">
+          <button class="btn-sm" onclick="load()">⟳ Atualizar</button>
+          <div class="live"><div class="dot"></div><span>AO VIVO</span></div>
+          <div class="clock" id="clock">--:--:--</div>
         </div>
-        <div class=&quot;rates&quot; id=&quot;rates&quot;></div>
       </div>
-    </div>
 
-    <!-- ACTIONS -->
-    <div class=&quot;card actions&quot;>
-      <button class=&quot;btn btn-primary&quot; id=&quot;process&quot; disabled>Calcular fechamento</button>
-      <button class=&quot;btn btn-dl hidden&quot; id=&quot;download&quot;>↓ Baixar planilha (.xlsx)</button>
-      <span class=&quot;status&quot; id=&quot;status&quot;>Aguardando arquivo…</span>
-    </div>
-    <div class=&quot;warn&quot; id=&quot;warn&quot;></div>
+      <div id="err"></div>
 
-    <!-- KPIs -->
-    <div class=&quot;kr hidden&quot; id=&quot;kpis&quot;>
-      <div class=&quot;kpi&quot; style=&quot;--kc:var(--or)&quot;><div class=&quot;kl&quot;>Base ICMS somada</div><div class=&quot;kv&quot; id=&quot;k-base&quot;>R$ --</div><div class=&quot;ks&quot;>soma da base</div></div>
-      <div class=&quot;kpi&quot; style=&quot;--kc:#64748b&quot;><div class=&quot;kl&quot;>ICMS destacado (origem)</div><div class=&quot;kv&quot; id=&quot;k-n&quot; style=&quot;color:#64748b&quot;>R$ --</div><div class=&quot;ks&quot;>coluna ICMS</div></div>
-      <div class=&quot;kpi&quot; style=&quot;--kc:var(--od)&quot;><div class=&quot;kl&quot;>ICMS ST / DIFAL a recolher</div><div class=&quot;kv&quot; id=&quot;k-st&quot;>R$ --</div><div class=&quot;ks&quot; id=&quot;k-st-sub&quot;>--</div></div>
-      <div class=&quot;kpi&quot; style=&quot;--kc:var(--gr)&quot;><div class=&quot;kl&quot;>ICMS Total (ICMS + ST)</div><div class=&quot;kv&quot; id=&quot;k-total&quot; style=&quot;color:var(--gr)&quot;>R$ --</div><div class=&quot;ks&quot;>consolidado</div></div>
-    </div>
-
-    <!-- TABLE -->
-    <div class=&quot;card hidden&quot; id=&quot;results&quot;>
-      <div class=&quot;atit&quot;><div class=&quot;pdot&quot;></div>Detalhamento por UF de destino</div>
-      <div class=&quot;tscroll&quot;>
-        <table id=&quot;uftable&quot;>
-          <thead><tr>
-            <th>UF</th><th>Alíq. %</th><th>Notas</th><th>Base ICMS</th>
-            <th>ICMS (origem)</th><th>ICMS ST (DIFAL)</th><th>ICMS Total</th>
-          </tr></thead>
-          <tbody></tbody>
-          <tfoot></tfoot>
-        </table>
+      <div class="kr">
+        <div class="kpi" style="--kc:var(--or)">
+          <div class="kl">A Receber (Em Aberto)</div><div class="kv" id="kAberto">R$ --</div>
+          <div class="ks" id="kAbertoSub">--</div>
+        </div>
+        <div class="kpi" style="--kc:var(--gr)">
+          <div class="kl">Recebido no Período</div><div class="kv" id="kReceb">R$ --</div>
+          <div class="ks">coluna Recebido</div>
+        </div>
+        <div class="kpi" style="--kc:var(--od)">
+          <div class="kl">Total a Receber (Bruto)</div><div class="kv" id="kBruto" style="font-size:1.7rem">R$ --</div>
+          <div class="ks">Saldo + Recebido</div>
+        </div>
+        <div class="kpi" style="--kc:var(--re)">
+          <div class="kl">% Atraso Geral</div><div class="kv" id="kPct">--%</div>
+          <div class="ks">Saldo / Total a Receber</div>
+        </div>
+        <div class="kpi" style="--kc:#64748b">
+          <div class="kl">Contas em Aberto</div><div class="kv" id="kQtd" style="font-size:1.7rem">--</div>
+          <div class="ks">nº de títulos</div>
+        </div>
       </div>
-    </div>
 
-    <!-- TICKER -->
-    <div class=&quot;tk hidden&quot; id=&quot;tkwrap&quot;><div class=&quot;ti&quot; id=&quot;ticker&quot;></div></div>
+      <div class="card">
+        <div class="atitle">
+          <div class="atit"><div class="pdot"></div>Fechamento — Recebimentos por Forma × Mês (a partir de Jan/26)</div>
+          <div class="dlbl" id="tStatus">--</div>
+        </div>
+        <div class="tscroll">
+          <div id="crTbWrap"><div class="lt" style="padding:30px;text-align:center">Carregando Contas a Receber...</div></div>
+        </div>
+        <div class="ks" style="margin-top:8px;color:var(--mu);line-height:1.5">
+          <b>Linhas por forma:</b> soma do <b>Saldo</b> apenas de contas com situação <b>"Aberto"</b>, pelo mês da <b>data de vencimento</b>.<br>
+          <b>Total a Receber</b> = Σ (Saldo + Recebido) de todas as contas do mês &nbsp;·&nbsp; <b>Recebido</b> = Σ Recebido &nbsp;·&nbsp; <b>% Atraso</b> = (Total a Receber − Recebido) ÷ Total a Receber.
+        </div>
+      </div>
 
-    <div class=&quot;foot&quot;>
-      Sanbox · Fechamento ICMS DIFAL · alíquotas internas de referência 2026 (editáveis) · confira a legislação vigente de cada UF antes do recolhimento · processamento 100% local no navegador.
-    </div>
+      <div class="card">
+        <div class="atitle">
+          <div class="atit"><div class="pdot"></div>Em Aberto por Marcador × Mês (a partir de Jan/26)</div>
+        </div>
+        <div class="tscroll">
+          <div id="marcTbWrap"><div class="lt" style="padding:24px;text-align:center">Carregando marcadores...</div></div>
+        </div>
+        <div class="ks" style="margin-top:8px;color:var(--mu);line-height:1.5">
+          Soma do <b>Saldo</b> apenas de contas com situação <b>"Aberto"</b>, agrupado pelo <b>Marcador</b> (coluna L) e pelo mês da <b>data de vencimento</b>. Contas sem marcador entram como <b>"S/Marcador"</b>.
+        </div>
+      </div>
+
+    </div><!-- /vCR -->
   </div>
 </div>
 
 <script>
-/* ---------- Alíquotas internas 2026 (editáveis) ---------- */
-const RATES_2026 = {
-  AC:19, AL:21.5, AP:18, AM:20, BA:20.5, CE:20, DF:20, ES:17, GO:19, MA:23,
-  MT:17, MS:17, MG:18, PA:19, PB:20, PR:19.5, PE:20.5, PI:22.5, RJ:22, RN:20,
-  RS:17, RO:19.5, RR:20, SC:17, SP:18, SE:20, TO:20
-};
-const UFS = Object.keys(RATES_2026).sort();
-const round2 = v => Math.round((v + Number.EPSILON) * 100) / 100;
-const money = v => 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+// ═══════════════════════ CONFIG ═══════════════════════
+const KEY    = 'AIzaSyCpFaibN_ct8r2ywjIlKByvZkxok5ytqXI';
+const CR_ID  = '1iZgpIyu0n7Vtmqid7NelE540YgbSgSE7r9N4drCGxDg';
+const CR_ABA = 'Contas a Receber';
+const START_YM = '2026-01';               // a partir de Janeiro/2026
+const MESNOME = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-let workbook=null, sheetName=null, fileBase='fechamento', processed=null;
+// ═══════════════════════ HELPERS ═══════════════════════
+// Número no padrão BR: "1.234,56" -> 1234.56 ; "574,9" -> 574.9 ; "" -> 0
+function num(s){
+  if(s==null) return 0;
+  s=(''+s).trim(); if(!s) return 0;
+  s=s.replace(/\s/g,'').replace(/\./g,'').replace(',','.');
+  const n=parseFloat(s); return isNaN(n)?0:n;
+}
+// Data -> 'YYYY-MM' (aceita ISO 2026-08-14T... ou BR 14/08/2026) ; senão null
+function ym(s){
+  if(!s) return null; s=(''+s).trim();
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);          if(m) return m[1]+'-'+m[2];
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);         if(m) return m[3]+'-'+String(m[2]).padStart(2,'0');
+  return null;
+}
+function R(v){ return 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function Rk(v){ // compacto para KPI
+  v=v||0; if(Math.abs(v)>=1e6) return 'R$ '+(v/1e6).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' mi';
+  if(Math.abs(v)>=1e3) return 'R$ '+(v/1e3).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' mil';
+  return R(v);
+}
+function P(v){ return (isFinite(v)?(v*100):0).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%'; }
+function mesLabel(k){ const[y,m]=k.split('-'); return MESNOME[+m]+'/'+y.slice(2); }
+function setLoad(p,t){ const lb=document.getElementById('lb'); if(lb)lb.style.width=p+'%'; if(t)document.getElementById('lt').textContent=t; }
 
-/* ---------- Relógio ---------- */
-function tick(){const d=new Date();document.getElementById('clock').textContent=d.toLocaleTimeString('pt-BR');}
+function aba(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById(id).classList.add('on'); btn.classList.add('on');
+}
+
+// ═══════════════════════ FETCH ═══════════════════════
+async function fetchSheet(range){
+  const enc=encodeURIComponent(`'${CR_ABA}'!${range}`);
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${CR_ID}/values/${enc}?key=${KEY}`);
+  const d=await r.json();
+  if(d.error) throw new Error(d.error.message);
+  return d.values||[];
+}
+
+// ═══════════════════════ LOAD + AGREGA ═══════════════════════
+async function load(){
+  const errEl=document.getElementById('err'); errEl.style.display='none';
+  document.getElementById('crTbWrap').innerHTML='<div class="lt" style="padding:30px;text-align:center">Carregando Contas a Receber...</div>';
+  try{
+    setLoad(20,'Buscando contas...');
+    // Colunas B..L -> [0]=Situação(B) [1]=Vencimento(C) [2]=Liquidação(D) [3]=Valor(E) [4]=Saldo(F) [5]=Vlr liq(G) [6]=Recebido(H) [7]=Forma(I) [8]=Categoria(J) [9]=Histórico(K) [10]=Marcador(L)
+    const rows=await fetchSheet('B1:L');
+    setLoad(70,'Processando...');
+
+    const formasSet=new Set(), marcSet=new Set();
+    const cell={};                                   // cell[forma][ym]    = Σ saldo (aberto)
+    const cellM={};                                  // cellM[marcador][ym] = Σ saldo (aberto)
+    const totReceber={}, totReceb={}, totAtraso={};  // por mês
+    const mesesSet=new Set();
+    let gAberto=0, gReceb=0, gBruto=0, gQtd=0;
+
+    for(const r of rows){
+      const situ=(r[0]||'').trim().toLowerCase();
+      const k=ym(r[1]); if(!k || k<START_YM) continue;
+      const saldo=num(r[4]), receb=num(r[6]);
+      const forma=((r[7]||'').trim())||'(Sem forma)';
+      const marc =((r[10]||'').trim())||'S/Marcador';
+      mesesSet.add(k);
+
+      // rodapé: TODAS as contas do mês
+      totReceber[k]=(totReceber[k]||0)+saldo+receb;
+      totReceb[k]  =(totReceb[k]  ||0)+receb;
+      gBruto+=saldo+receb; gReceb+=receb;
+
+      // linhas por forma / marcador: somente "Aberto"
+      if(situ==='aberto'){
+        formasSet.add(forma);
+        (cell[forma]=cell[forma]||{})[k]=(cell[forma][k]||0)+saldo;
+        totAtraso[k]=(totAtraso[k]||0)+saldo;
+        marcSet.add(marc);
+        (cellM[marc]=cellM[marc]||{})[k]=(cellM[marc][k]||0)+saldo;
+        gAberto+=saldo; gQtd++;
+      }
+    }
+
+    const meses=[...mesesSet].sort();
+    const formas=[...formasSet].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    // marcadores em ordem alfabética, com "S/Marcador" sempre por último
+    const marcs=[...marcSet].sort((a,b)=>{
+      if(a==='S/Marcador') return 1; if(b==='S/Marcador') return -1;
+      return a.localeCompare(b,'pt-BR');
+    });
+
+    renderTabela(meses,formas,cell,totReceber,totReceb,totAtraso);
+    renderMarcador(meses,marcs,cellM,totAtraso);
+
+    // KPIs
+    document.getElementById('kAberto').textContent=Rk(gAberto);
+    document.getElementById('kAbertoSub').textContent=meses.length?('em '+formas.length+' formas · '+meses.length+' meses'):'—';
+    document.getElementById('kReceb').textContent=Rk(gReceb);
+    document.getElementById('kBruto').textContent=Rk(gBruto);
+    const pctG=gBruto>0?(gBruto-gReceb)/gBruto:0;
+    const kp=document.getElementById('kPct'); kp.textContent=P(pctG);
+    kp.className='kv '+(pctG>=.5?'clow':pctG>=.25?'cmid':'cok'); kp.style.color='';
+    document.getElementById('kQtd').textContent=gQtd.toLocaleString('pt-BR');
+
+    document.getElementById('tStatus').textContent=rows.length.toLocaleString('pt-BR')+' títulos lidos';
+    document.getElementById('dRef').textContent=meses.length?(mesLabel(meses[0])+' → '+mesLabel(meses[meses.length-1])):'—';
+    setLoad(100,'Pronto');
+    setTimeout(()=>{document.getElementById('ov').style.display='none';document.getElementById('app').style.display='flex';},250);
+  }catch(e){
+    document.getElementById('ov').style.display='none';document.getElementById('app').style.display='flex';
+    const errEl=document.getElementById('err');
+    errEl.style.display='block';
+    errEl.textContent='Erro ao carregar dados: '+e.message+'  — verifique se a planilha está acessível pela API key.';
+    document.getElementById('crTbWrap').innerHTML='';
+  }
+}
+
+// ═══════════════════════ RENDER TABELA ═══════════════════════
+function renderTabela(meses,formas,cell,totReceber,totReceb,totAtraso){
+  if(!meses.length){
+    document.getElementById('crTbWrap').innerHTML='<div class="lt" style="padding:30px;text-align:center">Nenhuma conta encontrada a partir de Jan/26.</div>';
+    return;
+  }
+  const tdZ=v=>v>0?`<td>${R(v)}</td>`:`<td class="val-z">—</td>`;
+
+  // header
+  let h='<thead><tr><th>Forma de Recebimento</th>';
+  meses.forEach(k=>h+=`<th>${mesLabel(k)}</th>`);
+  h+='<th class="col-tot">Total</th></tr></thead>';
+
+  // body — formas
+  let b='<tbody>';
+  formas.forEach(f=>{
+    let tot=0;
+    b+=`<tr><td>${f}</td>`;
+    meses.forEach(k=>{ const v=(cell[f]&&cell[f][k])||0; tot+=v; b+=tdZ(v); });
+    b+=`<td class="col-tot">${R(tot)}</td></tr>`;
+  });
+  b+='</tbody>';
+
+  // footer
+  const sum=o=>meses.reduce((a,k)=>a+(o[k]||0),0);
+  const tAtr=sum(totAtraso), tRec=sum(totReceber), tRcb=sum(totReceb);
+  let f='<tfoot>';
+  // Total (Atraso) = soma das formas (aberto)
+  f+='<tr class="sep"><td>Total (Atraso)</td>';
+  meses.forEach(k=>f+=`<td>${R(totAtraso[k]||0)}</td>`);
+  f+=`<td class="col-tot">${R(tAtr)}</td></tr>`;
+  // Total a Receber
+  f+='<tr><td>Total a Receber</td>';
+  meses.forEach(k=>f+=`<td>${R(totReceber[k]||0)}</td>`);
+  f+=`<td class="col-tot">${R(tRec)}</td></tr>`;
+  // Recebido
+  f+='<tr class="recv"><td>Recebido</td>';
+  meses.forEach(k=>f+=`<td>${R(totReceb[k]||0)}</td>`);
+  f+=`<td class="col-tot">${R(tRcb)}</td></tr>`;
+  // % Atraso
+  f+='<tr><td>% Atraso</td>';
+  meses.forEach(k=>{ const tr=totReceber[k]||0, pc=tr>0?(tr-(totReceb[k]||0))/tr:0;
+    const cls=pc>=.5?'clow':pc>=.25?'cmid':'cok'; f+=`<td class="${cls}">${P(pc)}</td>`; });
+  const pcG=tRec>0?(tRec-tRcb)/tRec:0;
+  f+=`<td class="col-tot ${pcG>=.5?'clow':pcG>=.25?'cmid':'cok'}">${P(pcG)}</td></tr>`;
+  f+='</tfoot>';
+
+  document.getElementById('crTbWrap').innerHTML=`<table>${h}${b}${f}</table>`;
+}
+
+// ═══════════════════════ RENDER MARCADOR ═══════════════════════
+// Em Aberto (Saldo, situação "Aberto") por Marcador × Mês. Vazio -> "S/Marcador".
+function renderMarcador(meses,marcs,cellM,totAtraso){
+  if(!meses.length || !marcs.length){
+    document.getElementById('marcTbWrap').innerHTML='<div class="lt" style="padding:24px;text-align:center">Nenhuma conta em aberto com marcador a partir de Jan/26.</div>';
+    return;
+  }
+  const tdZ=v=>v>0?`<td>${R(v)}</td>`:`<td class="val-z">—</td>`;
+
+  let h='<thead><tr><th>Marcador</th>';
+  meses.forEach(k=>h+=`<th>${mesLabel(k)}</th>`);
+  h+='<th class="col-tot">Total</th></tr></thead>';
+
+  let b='<tbody>';
+  marcs.forEach(mc=>{
+    let tot=0;
+    b+=`<tr><td>${mc}</td>`;
+    meses.forEach(k=>{ const v=(cellM[mc]&&cellM[mc][k])||0; tot+=v; b+=tdZ(v); });
+    b+=`<td class="col-tot">${R(tot)}</td></tr>`;
+  });
+  b+='</tbody>';
+
+  // rodapé Total = mesmo total em aberto por mês (soma dos marcadores == Total Atraso)
+  const sum=o=>meses.reduce((a,k)=>a+(o[k]||0),0);
+  let f='<tfoot><tr class="sep"><td>Total em Aberto</td>';
+  meses.forEach(k=>f+=`<td>${R(totAtraso[k]||0)}</td>`);
+  f+=`<td class="col-tot">${R(sum(totAtraso))}</td></tr></tfoot>`;
+
+  document.getElementById('marcTbWrap').innerHTML=`<table>${h}${b}${f}</table>`;
+}
+
+// ═══════════════════════ CLOCK ═══════════════════════
+function tick(){ const d=new Date(); document.getElementById('clock').textContent=d.toLocaleTimeString('pt-BR'); }
 setInterval(tick,1000); tick();
 
-/* ---------- Origem + tabela de alíquotas ---------- */
-const originSel=document.getElementById('origin');
-UFS.forEach(uf=>{const o=document.createElement('option');o.value=uf;o.textContent=uf;originSel.appendChild(o);});
-originSel.value='ES';
-function buildRates(){
-  const box=document.getElementById('rates'); box.innerHTML='';
-  UFS.forEach(uf=>{
-    const d=document.createElement('div'); d.className='rate'+(uf===originSel.value?' origin':''); d.dataset.uf=uf;
-    d.innerHTML=`<span>${uf}</span><input type=&quot;number&quot; step=&quot;0.01&quot; min=&quot;0&quot; value=&quot;${RATES_2026[uf]}&quot; data-uf=&quot;${uf}&quot;>`;
-    box.appendChild(d);
-  });
-}
-buildRates();
-originSel.addEventListener('change',()=>{buildRates();
-  document.getElementById('dRef').textContent=originSel.value+' · '+ (RATES_2026[originSel.value]??'--') +'%';});
-document.getElementById('reset').addEventListener('click',()=>{
-  UFS.forEach(uf=>{const i=document.querySelector(`input[data-uf=&quot;${uf}&quot;]`); if(i)i.value=RATES_2026[uf];});
-});
-function currentRates(){const r={};document.querySelectorAll('input[data-uf]').forEach(i=>{const v=parseFloat(i.value);if(!isNaN(v))r[i.dataset.uf]=v;});return r;}
-
-/* ---------- Upload ---------- */
-const drop=document.getElementById('drop'), fileInput=document.getElementById('file');
-drop.addEventListener('click',()=>fileInput.click());
-drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag');});
-drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
-drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
-fileInput.addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
-function loadFile(file){
-  fileBase=file.name.replace(/\.[^.]+$/,'')||'fechamento';
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      workbook=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      sheetName=workbook.SheetNames[0];
-      const chip=document.getElementById('filechip');
-      chip.style.display='block'; chip.textContent='✓ '+file.name+'  ·  aba: '+sheetName;
-      document.getElementById('process').disabled=false;
-      document.getElementById('status').textContent='Arquivo carregado. Clique em Calcular fechamento.';
-      document.getElementById('download').classList.add('hidden');
-      document.getElementById('results').classList.add('hidden');
-      document.getElementById('kpis').classList.add('hidden');
-      document.getElementById('tkwrap').classList.add('hidden');
-    }catch(err){document.getElementById('status').textContent='Erro ao ler o arquivo: '+err.message;}
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-/* ---------- Núcleo do cálculo ---------- */
-function processRows(rows, opts){
-  const origin=opts.origin, rates=opts.rates, zeroNoDifal=opts.zeroNoDifal;
-  let hIdx=rows.findIndex(r=>r &amp;&amp; r[12]==='Base ICMS'); if(hIdx<0)hIdx=0;
-  const NEW1=19,NEW2=20;
-  rows[hIdx][NEW1]='ICMS Total'; rows[hIdx][NEW2]='ICMS % (destino)';
-  let cat='';
-  const totals={base:0,icmsN:0,icmsST:0,icmsTotal:0,comDifal:0,semDifal:0,semAliq:new Set()};
-  const byUF={};
-  for(let i=hIdx+1;i<rows.length;i++){
-    const r=rows[i]; if(!r)continue;
-    const A=r[0],B=r[1];
-    if(A &amp;&amp; (B===null||B===undefined||B==='')){cat=String(A);continue;}
-    if(B===null||B===undefined||B==='')continue;
-    const isDev=/devolu/i.test(cat);
-    const uf=(r[3]||'').toString().trim().toUpperCase();
-    const base=Number(r[12])||0, icms=Number(r[13])||0, rate=rates[uf];
-    const intra=uf===origin;
-    let q=0,pct=null;
-    const noDifal=isDev||intra;
-    const applies = zeroNoDifal ? (rate!=null &amp;&amp; !noDifal) : (rate!=null);
-    if(applies){const q0=round2(base*rate/100-icms); q=q0<0?0:q0; pct=rate;}
-    if(!noDifal &amp;&amp; rate==null) totals.semAliq.add(uf);
-    const icmsTotal=round2(icms+q);
-    r[16]=q; r[NEW1]=icmsTotal; r[NEW2]=pct;
-    totals.base+=base; totals.icmsN+=icms; totals.icmsST+=q; totals.icmsTotal+=icmsTotal;
-    if(q>0)totals.comDifal++; else totals.semDifal++;
-    if(!byUF[uf])byUF[uf]={uf,base:0,icmsN:0,icmsST:0,icmsTotal:0,notas:0,rate:rate??null};
-    const b=byUF[uf]; b.base+=base;b.icmsN+=icms;b.icmsST+=q;b.icmsTotal+=icmsTotal;b.notas++;
-  }
-  ['base','icmsN','icmsST','icmsTotal'].forEach(k=>totals[k]=round2(totals[k]));
-  totals.semAliq=[...totals.semAliq];
-  return {rows,totals,byUF,headerIdx:hIdx};
-}
-
-/* ---------- Executar ---------- */
-document.getElementById('process').addEventListener('click',()=>{
-  if(!workbook)return;
-  const ws=workbook.Sheets[sheetName];
-  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
-  const res=processRows(rows,{origin:originSel.value,rates:currentRates(),zeroNoDifal:document.getElementById('zero').checked});
-  processed=res; renderResults(res); buildOutput(res);
-  document.getElementById('download').classList.remove('hidden');
-  document.getElementById('status').textContent='Cálculo concluído.';
-});
-
-function renderResults(res){
-  const t=res.totals;
-  document.getElementById('k-base').textContent=money(t.base);
-  document.getElementById('k-n').textContent=money(t.icmsN);
-  document.getElementById('k-st').textContent=money(t.icmsST);
-  document.getElementById('k-total').textContent=money(t.icmsTotal);
-  document.getElementById('k-st-sub').textContent=t.comDifal+' notas com DIFAL';
-  document.getElementById('kpis').classList.remove('hidden');
-  const warn=document.getElementById('warn');
-  if(t.semAliq.length){warn.style.display='block';warn.textContent='⚠ UFs sem alíquota cadastrada (ICMS ST não calculado): '+t.semAliq.join(', ')+'. Preencha e recalcule.';}
-  else warn.style.display='none';
-  const tb=document.querySelector('#uftable tbody'); tb.innerHTML='';
-  Object.values(res.byUF).sort((a,b)=>b.icmsST-a.icmsST).forEach(b=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${b.uf}</td><td>${b.rate!=null?b.rate.toLocaleString('pt-BR')+'%':'<span class=pill>—</span>'}</td>`+
-      `<td>${b.notas}</td><td>${money(b.base)}</td><td>${money(b.icmsN)}</td><td>${money(b.icmsST)}</td><td>${money(b.icmsTotal)}</td>`;
-    tb.appendChild(tr);
-  });
-  document.querySelector('#uftable tfoot').innerHTML=
-    `<tr><td>TOTAL</td><td></td><td>${t.comDifal+t.semDifal}</td><td>${money(t.base)}</td><td>${money(t.icmsN)}</td><td>${money(t.icmsST)}</td><td>${money(t.icmsTotal)}</td></tr>`;
-  document.getElementById('results').classList.remove('hidden');
-  const top=Object.values(res.byUF).sort((a,b)=>b.icmsST-a.icmsST).slice(0,10)
-    .map(b=>`<span class=&quot;hi&quot;>${b.uf}</span> ${money(b.icmsST)}`).join('<span class=&quot;sp&quot;>•</span>');
-  document.getElementById('ticker').innerHTML=
-    `<span class=&quot;hi&quot;>ICMS ST / DIFAL TOTAL: ${money(t.icmsST)}</span><span class=&quot;sp&quot;>•</span>ICMS Total: ${money(t.icmsTotal)}<span class=&quot;sp&quot;>•</span>${top}<span class=&quot;sp&quot;>•</span>`;
-  document.getElementById('tkwrap').classList.remove('hidden');
-}
-
-/* ---------- Gerar xlsx ---------- */
-function buildOutput(res){
-  const out=XLSX.utils.aoa_to_sheet(res.rows,{cellDates:false});
-  const m='#,##0.00', pctf='0.00&quot;%&quot;';
-  const range=XLSX.utils.decode_range(out['!ref']);
-  for(let R=1;R<=range.e.r;R++){
-    [7,8,9,10,11,12,13,14,15,16,17,18,19].forEach(C=>{const a=XLSX.utils.encode_cell({r:R,c:C});if(out[a]&amp;&amp;typeof out[a].v==='number')out[a].z=m;});
-    const u=XLSX.utils.encode_cell({r:R,c:20});if(out[u]&amp;&amp;typeof out[u].v==='number')out[u].z=pctf;
-  }
-  out['!cols']=[{wch:38},{wch:10},{wch:28},{wch:6},{wch:12},{wch:24},{wch:16},{wch:12},{wch:9},{wch:9},{wch:8},{wch:12},{wch:12},{wch:11},{wch:9},{wch:9},{wch:12},{wch:10},{wch:12},{wch:13},{wch:14}];
-  const nwb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(nwb,out,sheetName||'Fechamento');
-  processed.outWb=nwb;
-}
-document.getElementById('download').addEventListener('click',()=>{
-  if(!processed||!processed.outWb)return;
-  XLSX.writeFile(processed.outWb, fileBase+'_DIFAL_preenchido.xlsx');
-});
-</script>
-</body>
-</html>
-"></iframe>
-</div>
-<div id="view-difal2" style="display:none">
-  <iframe id="difal2Frame" title="Arquivo DIFAL — Guias GNRE" srcdoc="<!DOCTYPE html>
-<html lang=&quot;pt-BR&quot;>
-<head>
-<meta charset=&quot;UTF-8&quot;>
-<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;>
-<title>Leitor de Guias GNRE / DIFAL — Mercado Livre</title>
-<script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js&quot;></script>
-<script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js&quot;></script>
-<script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js&quot;></script>
-<style>
-  :root{
-    --bg:#0f172a; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
-    --brand:#1f4e78; --brand2:#2563eb; --ok:#15803d; --okbg:#dcfce7; --warn:#b45309; --warnbg:#fef3c7;
-    --accent:#f1f5f9;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,Roboto,Helvetica,Arial,sans-serif;
-       color:var(--ink);background:linear-gradient(180deg,#f8fafc,#eef2f7);min-height:100vh}
-  header{background:var(--brand);color:#fff;padding:22px 28px}
-  header h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.2px}
-  header p{margin:6px 0 0;font-size:13px;opacity:.85}
-  .wrap{max-width:1060px;margin:22px auto;padding:0 18px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:18px;
-        box-shadow:0 1px 2px rgba(15,23,42,.04)}
-  .card h2{margin:0 0 4px;font-size:15px}
-  .card .hint{color:var(--muted);font-size:13px;margin:0 0 14px}
-  .drop{border:2px dashed #cbd5e1;border-radius:12px;padding:30px;text-align:center;background:#fbfdff;
-        transition:.15s;cursor:pointer}
-  .drop.drag{border-color:var(--brand2);background:#eff6ff}
-  .drop svg{width:40px;height:40px;opacity:.5}
-  .drop b{display:block;margin-top:8px;font-size:15px}
-  .drop span{color:var(--muted);font-size:13px}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  button{font:inherit;border:0;border-radius:9px;padding:10px 16px;font-weight:600;cursor:pointer}
-  .btn{background:var(--brand2);color:#fff}
-  .btn:hover{filter:brightness(1.05)}
-  .btn.sec{background:var(--accent);color:var(--ink);border:1px solid var(--line)}
-  .btn.ok{background:var(--ok);color:#fff}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
-  input[type=text]{font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 11px;width:100%}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left}
-  th{background:var(--brand);color:#fff;font-weight:600;position:sticky;top:0}
-  th:first-child{border-top-left-radius:8px}th:last-child{border-top-right-radius:8px}
-  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-  td.c,th.c{text-align:center}
-  tr.warn td{background:var(--warnbg)}
-  td [contenteditable]{outline:none;min-width:40px;display:inline-block}
-  td.editable{cursor:text}
-  td.editable:focus-within{background:#eff6ff}
-  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:var(--accent);color:var(--muted)}
-  .tag.w{background:var(--warnbg);color:var(--warn)}
-  .tag.o{background:var(--okbg);color:var(--ok)}
-  .totbar{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;
-          border-top:2px solid var(--line);font-size:15px}
-  .totbar b{font-size:19px;color:var(--brand)}
-  .log{font-size:12.5px;color:var(--muted);max-height:150px;overflow:auto;margin-top:10px;
-       background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:8px 10px;white-space:pre-wrap}
-  .del{color:#dc2626;cursor:pointer;font-weight:700;border:0;background:none;font-size:16px;padding:0 4px}
-  .pill{font-size:12px;color:var(--muted)}
-  .hidden{display:none}
-  .status{font-size:13px;margin-top:8px}
-  details summary{cursor:pointer;font-weight:600;font-size:14px}
-  code{background:#f1f5f9;padding:1px 5px;border-radius:5px;font-size:12.5px}
-  ol{padding-left:20px;line-height:1.7;font-size:13.5px}
-  .barmini{height:8px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:10px}
-  .barmini i{display:block;height:100%;background:var(--brand2);width:0}
-</style>
-</head>
-<body>
-<header>
-  <h1>Leitor de Guias GNRE / DIFAL — Mercado Livre</h1>
-  <p>Suba a pasta de comprovantes do DIFAL. O sistema lê cada subpasta e monta o relatório: nº NF · Total a Recolher · Estado.</p>
-</header>
-
-<div class=&quot;wrap&quot;>
-
-  <div class=&quot;card&quot;>
-    <h2>1. Suba a pasta (ou o .zip)</h2>
-    <p class=&quot;hint&quot;>Pode selecionar a pasta inteira que o Mercado Livre gera, ou arrastar o arquivo <b>.zip</b> aqui. Tudo é processado no seu navegador — nada é enviado para servidores.</p>
-    <div class=&quot;drop&quot; id=&quot;drop&quot;>
-      <svg viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot;><path d=&quot;M12 16V4m0 0L8 8m4-4l4 4&quot;/><path d=&quot;M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2&quot;/></svg>
-      <b>Arraste a pasta ou o .zip aqui</b>
-      <span>ou clique para escolher</span>
-    </div>
-    <div class=&quot;row&quot; style=&quot;margin-top:12px&quot;>
-      <button class=&quot;btn sec&quot; id=&quot;pickFolder&quot;>Escolher pasta</button>
-      <button class=&quot;btn sec&quot; id=&quot;pickZip&quot;>Escolher .zip</button>
-      <span class=&quot;pill&quot; id=&quot;fileState&quot;></span>
-    </div>
-    <input id=&quot;folderInput&quot; type=&quot;file&quot; webkitdirectory directory multiple class=&quot;hidden&quot;>
-    <input id=&quot;zipInput&quot; type=&quot;file&quot; accept=&quot;.zip&quot; class=&quot;hidden&quot;>
-    <div class=&quot;barmini hidden&quot; id=&quot;progWrap&quot;><i id=&quot;prog&quot;></i></div>
-    <div class=&quot;log hidden&quot; id=&quot;log&quot;></div>
-  </div>
-
-  <div class=&quot;card hidden&quot; id=&quot;resultCard&quot;>
-    <h2>2. Confira o relatório</h2>
-    <p class=&quot;hint&quot;>Valores em <span class=&quot;tag w&quot;>amarelo</span> merecem conferência (leitura ambígua). Clique em qualquer célula para corrigir. Duplicatas de nº NF são unificadas automaticamente.</p>
-    <div style=&quot;overflow:auto;max-height:460px;border:1px solid var(--line);border-radius:10px&quot;>
-      <table id=&quot;tbl&quot;>
-        <thead><tr>
-          <th class=&quot;c&quot;>nº NF</th>
-          <th class=&quot;num&quot;>Total a Recolher</th>
-          <th class=&quot;c&quot;>UF</th>
-          <th>Estado</th>
-          <th>Origem</th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class=&quot;totbar&quot;>
-      <span id=&quot;count&quot; class=&quot;pill&quot;></span>
-      <span>Total geral: <b id=&quot;grandTotal&quot;>R$ 0,00</b></span>
-    </div>
-    <div class=&quot;row&quot; style=&quot;margin-top:16px&quot;>
-      <button class=&quot;btn&quot; id=&quot;dlXlsx&quot;>⬇ Baixar Excel (.xlsx)</button>
-      <button class=&quot;btn sec&quot; id=&quot;dlCsv&quot;>Baixar CSV</button>
-      <button class=&quot;btn ok&quot; id=&quot;sendGs&quot;>⇧ Enviar para Google Sheets</button>
-      <button class=&quot;btn sec&quot; id=&quot;clearAll&quot;>Limpar tudo</button>
-    </div>
-    <div class=&quot;status&quot; id=&quot;sendStatus&quot;></div>
-  </div>
-
-  <div class=&quot;card&quot;>
-    <details id=&quot;gsCfg&quot;>
-      <summary>⚙ Configurar o Google Sheets ao vivo (fazer uma vez)</summary>
-      <p class=&quot;hint&quot; style=&quot;margin-top:12px&quot;>Cole aqui a URL do seu Web App do Google Apps Script (as instruções vieram junto na entrega). Ela fica salva só neste arquivo, no seu navegador.</p>
-      <input id=&quot;gsUrl&quot; type=&quot;text&quot; placeholder=&quot;https://script.google.com/macros/s/…/exec&quot;>
-      <div class=&quot;row&quot; style=&quot;margin-top:10px&quot;>
-        <button class=&quot;btn sec&quot; id=&quot;saveUrl&quot;>Salvar URL</button>
-        <span class=&quot;pill&quot; id=&quot;urlState&quot;></span>
-      </div>
-    </details>
-  </div>
-
-  <p class=&quot;pill&quot; style=&quot;text-align:center&quot;>Feito para as guias de DIFAL/GNRE do Mercado Livre · lê layouts de MS, CE, RR, MT, RN, PI, TO e GNRE padrão.</p>
-</div>
-<script>
-
-pdfjsLib.GlobalWorkerOptions.workerSrc=&quot;https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js&quot;;
-
-const UFNAME={AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
-
-let ROWS=[]; // {nf, total, uf, source, warn}
-const $=s=>document.querySelector(s);
-const logEl=$('#log');
-function log(m){logEl.classList.remove('hidden');logEl.textContent+=m+&quot;\n&quot;;logEl.scrollTop=logEl.scrollHeight;}
-function money(v){return v==null||isNaN(v)?'—':'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
-
-/* ---------- extração ---------- */
-function nfFromKey(k){return k&amp;&amp;k.length>=44?String(parseInt(k.slice(25,34),10)):null;}
-
-function parseXml(text){
-  try{
-    const doc=new DOMParser().parseFromString(text,'application/xml');
-    const g=t=>{const e=doc.getElementsByTagName(t);return e.length?e[0].textContent.trim():null;};
-    const nNF=g('nNF');
-    let uf=null;
-    const dest=doc.getElementsByTagName('dest')[0];
-    if(dest){const u=dest.getElementsByTagName('UF');if(u.length)uf=u[0].textContent.trim();}
-    return {nf:nNF?parseInt(nNF,10):null, uf};
-  }catch(e){return {nf:null,uf:null};}
-}
-
-// valor codificado no nome do arquivo da guia: ...<uf><inteiro>-<dec><cnpj 32268964...>
-function fnameTotal(name){
-  const core=name.toLowerCase().replace('.pdf','');
-  const m=core.match(/([a-z]{2})-?r?-?(\d+)-(\d+)[-.]?32268964/);
-  if(!m)return null;
-  let dec=m[3]; if(dec.length===1)dec+='0';
-  return parseFloat(m[2]+'.'+dec.slice(0,2));
-}
-function fnameUf(name){
-  const core=name.toLowerCase();
-  const m=core.match(/([a-z]{2})-?r?-?\d+-\d+[-.]?32268964/);
-  return m?m[1].toUpperCase():null;
-}
-
-// leitura posicional do PDF: reconstrói linhas e procura o total perto do rótulo
-async function pdfTotal(buf){
-  try{
-    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-    const page=await pdf.getPage(1);
-    const tc=await page.getTextContent();
-    const items=tc.items.map(it=>({s:it.str,x:it.transform[4],y:Math.round(it.transform[5])})).filter(i=>i.s.trim());
-    const cur=/(\d{1,3}(?:\.\d{3})*|\d+),(\d{2})\b/;
-    const toNum=s=>{const m=s.match(cur);return m?parseFloat((m[1].replace(/\./g,''))+'.'+m[2]):null;};
-    const labels=[/total\s*a\s*recolher/i,/valor\s*do\s*documento/i,/valor\s*total/i,/^\s*total\s*$/i,/totalizadores/i,/valor\s*da\s*receita/i];
-    for(const rx of labels){
-      const lab=items.find(i=>rx.test(i.s));
-      if(!lab)continue;
-      // candidatos com valor monetário, mesma faixa vertical (± 6px) ou logo abaixo
-      const cands=items.filter(i=>cur.test(i.s)).map(i=>({v:toNum(i.s),dy:Math.abs(i.y-lab.y),below:lab.y-i.y,x:i.x}))
-                       .filter(c=>c.v!=null);
-      let same=cands.filter(c=>c.dy<=6);
-      if(same.length){ same.sort((a,b)=>b.x-a.x); return same[0].v; }
-      let below=cands.filter(c=>c.below>0&amp;&amp;c.below<26);
-      if(below.length){ below.sort((a,b)=>a.below-b.below); return below[0].v; }
-    }
-    return null;
-  }catch(e){return null;}
-}
-
-/* ---------- ingestão ---------- */
-async function ingest(fileList){
-  // agrupa por subpasta; cada item {name, path, getBuf(), text?}
-  const groups={};
-  for(const f of fileList){
-    const path=f.path||f.webkitRelativePath||f.name;
-    const dir=path.split('/').slice(0,-1).join('/')||'_';
-    (groups[dir]=groups[dir]||[]).push(f);
-  }
-  const dirs=Object.keys(groups);
-  progWrap.classList.remove('hidden');
-  let done=0, added=0;
-  for(const dir of dirs){
-    const files=groups[dir];
-    const xml=files.find(f=>/\.xml$/i.test(f.name));
-    const guia=files.find(f=>/^guia/i.test(f.name)&amp;&amp;/\.pdf$/i.test(f.name));
-    done++; prog.style.width=Math.round(done/dirs.length*100)+'%';
-    if(!guia){ if(xml)log('· sem guia de pagamento: '+dir.split('/').pop()); continue; }
-    let nf=null,uf=null;
-    if(xml){ const x=parseXml(await xml.text()); nf=x.nf; uf=x.uf; }
-    // fallback NF pela chave no nome da pasta
-    if(!nf){ const km=dir.match(/(\d{44})/); if(km)nf=parseInt(nfFromKey(km[1]),10); }
-    if(!uf)uf=fnameUf(guia.name);
-    const fnv=fnameTotal(guia.name);
-    let pdfv=null;
-    try{ pdfv=await pdfTotal(await guia.arrayBuffer()); }catch(e){}
-    // decide total: nome do arquivo é a fonte validada; PDF confirma
-    let total=fnv!=null?fnv:pdfv;
-    let warn=false, source='nome';
-    if(fnv!=null&amp;&amp;pdfv!=null&amp;&amp;Math.abs(fnv-pdfv)>0.01){warn=true;source='nome≠pdf';}
-    else if(fnv==null&amp;&amp;pdfv!=null){source='pdf';}
-    else if(fnv==null&amp;&amp;pdfv==null){warn=true;source='?';}
-    if(!uf){warn=true;}
-    upsert({nf,total,uf,source,warn,origem:'Mercado Livre'});
-    added++;
-  }
-  log('✔ '+added+' guia(s) processada(s).');
-  progWrap.classList.add('hidden'); prog.style.width='0';
-  render();
-}
-
-function upsert(r){
-  const i=ROWS.findIndex(x=>x.nf===r.nf&amp;&amp;r.nf!=null);
-  if(i>=0)ROWS[i]=r; else ROWS.push(r);
-}
-
-/* ---------- render ---------- */
-function render(){
-  ROWS.sort((a,b)=>(a.nf||0)-(b.nf||0));
-  const tb=$('#tbl tbody'); tb.innerHTML='';
-  let sum=0;
-  ROWS.forEach((r,idx)=>{
-    if(typeof r.total==='number')sum+=r.total;
-    const tr=document.createElement('tr'); if(r.warn)tr.className='warn';
-    tr.innerHTML=`
-      <td class=&quot;c editable&quot; data-k=&quot;nf&quot; contenteditable>${r.nf??''}</td>
-      <td class=&quot;num editable&quot; data-k=&quot;total&quot; contenteditable>${r.total==null?'':Number(r.total).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-      <td class=&quot;c editable&quot; data-k=&quot;uf&quot; contenteditable>${r.uf||''}</td>
-      <td class=&quot;editable&quot; data-k=&quot;nome&quot; contenteditable>${r.uf?(UFNAME[r.uf]||''):''}</td>
-      <td class=&quot;editable&quot; data-k=&quot;origem&quot; contenteditable>${r.origem||'Mercado Livre'}</td>`;
-    tr.querySelectorAll('.editable').forEach(td=>{
-      td.addEventListener('blur',()=>editCell(idx,td.dataset.k,td.textContent.trim()));
-    });
-    tb.appendChild(tr);
-  });
-  $('#grandTotal').textContent=money(sum);
-  $('#count').textContent=ROWS.length+' nota(s) fiscal(is)';
-  $('#resultCard').classList.remove('hidden');
-}
-function editCell(idx,k,val){
-  const r=ROWS[idx];
-  if(k==='nf')r.nf=val?parseInt(val.replace(/\D/g,''),10):null;
-  else if(k==='total'){const n=parseFloat(val.replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',','.'));r.total=isNaN(n)?null:n;r.warn=false;r.source='manual';}
-  else if(k==='uf'){const u=val.slice(0,2).toUpperCase();if(/^[A-Z]{2}$/.test(u)){r.uf=u;delete r.nomeManual;}}
-  else if(k==='nome'){r.nomeManual=val;UFNAME[r.uf]=val;}
-  else if(k==='origem'){r.origem=val;}
-  render();
-}
-
-/* ---------- export ---------- */
-const HEAD=['nº NF','Total a Recolher','UF','Estado','Origem'];
-function rowsForExport(){return ROWS.map(r=>({'nº NF':r.nf,'Total a Recolher':r.total,'UF':r.uf||'','Estado':r.uf?(UFNAME[r.uf]||''):'','Origem':r.origem||'Mercado Livre'}));}
-$('#dlXlsx').onclick=()=>{
-  const data=rowsForExport();
-  const total=ROWS.reduce((s,r)=>s+(typeof r.total==='number'?r.total:0),0);
-  data.push({'nº NF':'TOTAL','Total a Recolher':total,'UF':'','Estado':'','Origem':''});
-  const ws=XLSX.utils.json_to_sheet(data,{header:HEAD});
-  ws['!cols']=[{wch:12},{wch:18},{wch:6},{wch:24},{wch:16}];
-  for(let i=2;i<=data.length+1;i++){const c=ws['B'+i];if(c&amp;&amp;typeof c.v==='number'){c.z='R$ #,##0.00';c.t='n';}}
-  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'DIFAL');
-  XLSX.writeFile(wb,'Relatorio_DIFAL.xlsx');
-};
-$('#dlCsv').onclick=()=>{
-  const lines=[HEAD.slice()];
-  ROWS.forEach(r=>lines.push([r.nf,(r.total??'').toString().replace('.',','),r.uf||'',r.uf?(UFNAME[r.uf]||''):'',r.origem||'Mercado Livre']));
-  const csv=lines.map(l=>l.map(x=>`&quot;${String(x??'').replace(/&quot;/g,'&quot;&quot;')}&quot;`).join(';')).join('\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([&quot;﻿&quot;+csv],{type:'text/csv'}));a.download='Relatorio_DIFAL.csv';a.click();
-};
-
-/* ---------- Google Sheets ---------- */
-let GS_URL='';
-function loadUrl(){try{GS_URL=localStorage.getItem('gnre_gs_url')||'';}catch(e){GS_URL='';}
-  if(GS_URL){$('#gsUrl').value=GS_URL;$('#urlState').textContent='URL salva ✓';}}
-$('#saveUrl').onclick=()=>{GS_URL=$('#gsUrl').value.trim();try{localStorage.setItem('gnre_gs_url',GS_URL);}catch(e){}$('#urlState').textContent=GS_URL?'URL salva ✓':'—';};
-$('#sendGs').onclick=async()=>{
-  if(!GS_URL){$('#gsCfg').open=true;$('#sendStatus').textContent='Configure primeiro a URL do Google Apps Script (seção ⚙ abaixo).';return;}
-  const payload={rows:ROWS.filter(r=>r.nf!=null).map(r=>({nf:r.nf,total:r.total,uf:r.uf||'',estado:r.uf?(UFNAME[r.uf]||''):'',origem:r.origem||'Mercado Livre'}))};
-  $('#sendStatus').textContent='Enviando '+payload.rows.length+' linha(s)…';
-  try{
-    await fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
-    $('#sendStatus').innerHTML='✅ Enviado. Abra sua planilha Google para conferir (as NFs já existentes são atualizadas, as novas são acrescentadas).';
-  }catch(e){$('#sendStatus').textContent='Erro ao enviar: '+e.message;}
-};
-
-/* ---------- entrada de arquivos ---------- */
-const drop=$('#drop');
-$('#pickFolder').onclick=()=>$('#folderInput').click();
-$('#pickZip').onclick=()=>$('#zipInput').click();
-$('#folderInput').onchange=e=>{if(e.target.files.length){$('#fileState').textContent=e.target.files.length+' arquivo(s) da pasta';ingest([...e.target.files]);}};
-$('#zipInput').onchange=e=>{if(e.target.files.length)handleZip(e.target.files[0]);};
-drop.onclick=()=>$('#folderInput').click();
-['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
-['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
-drop.addEventListener('drop',async e=>{
-  const items=e.dataTransfer.items;
-  const zip=[...e.dataTransfer.files].find(f=>/\.zip$/i.test(f.name));
-  if(zip){handleZip(zip);return;}
-  if(items&amp;&amp;items.length&amp;&amp;items[0].webkitGetAsEntry){
-    const files=[]; const walk=(entry,path)=>new Promise(res=>{
-      if(entry.isFile)entry.file(f=>{f.path=path+f.name;files.push(f);res();});
-      else if(entry.isDirectory){const rd=entry.createReader();rd.readEntries(async ents=>{for(const en of ents)await walk(en,path+entry.name+'/');res();});}
-      else res();
-    });
-    const roots=[...items].map(i=>i.webkitGetAsEntry()).filter(Boolean);
-    for(const r of roots)await walk(r,'');
-    $('#fileState').textContent=files.length+' arquivo(s)';
-    ingest(files);
-  }
-});
-async function handleZip(file){
-  $('#fileState').textContent='Lendo '+file.name+'…';
-  const zip=await JSZip.loadAsync(file);
-  const files=[];
-  const names=Object.keys(zip.files).filter(n=>!zip.files[n].dir&amp;&amp;/\.(xml|pdf)$/i.test(n));
-  for(const n of names){
-    const entry=zip.files[n];
-    files.push({name:n.split('/').pop(),path:n,
-      text:()=>entry.async('string'),
-      arrayBuffer:()=>entry.async('arraybuffer')});
-  }
-  $('#fileState').textContent=files.length+' arquivo(s) no zip';
-  ingest(files);
-}
-$('#clearAll').onclick=()=>{ROWS=[];render();logEl.textContent='';$('#sendStatus').textContent='';$('#resultCard').classList.add('hidden');};
-loadUrl();
-
-</script>
-</body>
-</html>"></iframe>
-</div>
-
-<script>
-const TOL = 0.01;
-const CANAIS = ['Amazon', 'Casas Bahia', 'Magazine Luiza'];
-const ALIAS = { 'Magazine Luiza': ['magalu'], 'Casas Bahia': ['via varejo', 'viavarejo', 'casasbahia'] };
-const EMBED = /*__CFG_START__*/{"link":"https://docs.google.com/spreadsheets/d/1bDkFVZLH2vDDWEgmEtdcEKyyKbn5_S94MVpf2e5HTJc/edit","webhook":"https://script.google.com/macros/s/AKfycbyLpWFLa1Zm3mTAYdCqEeok2_Qk0VsULnETb1lTH-3yiyEwiVhmS7qyPL6HqR5zaeF1Sw/exec"}/*__CFG_END__*/;
-const RESULTS_URL = "https://docs.google.com/spreadsheets/d/1PnY48rqw9ACYKUGQ2V_1SGMVcCE-97BiOaFEJlQP5bo/edit?gid=907230061#gid=907230061";
-const MAP_TAB_CB = 'Pedidos Casas Bahia';   // aba de-para: DATA | Pedido | SKU
-let MAP_CB = {};                            // { pedido normalizado -> SKU real }
-const normPed = v => String(v == null ? '' : v).trim().replace(/\.0+$/, '');
-
-// ---------- núcleo de cálculo ----------
-function truncPct(x){ return Math.floor(x * 10000) / 100; }
-
-function conciliar(rows, rules){
-  const ok = [], mais = [], menos = [], dev = [];
-  rows.forEach(r => {
-    const regra = rules.find(g => g.sku === r.sku && r.data >= g.ini && r.data <= g.fim);
-    if (!regra) return;
-    const base = (r.base != null) ? r.base : (r.bruto - Math.abs(r.camp || 0));
-    const q = (r.comRS != null) ? Math.abs(r.comRS) : Math.abs(r.com);
-    const negPct = regra.com * 100;
-    const linha = { ...r, camp: -Math.abs(r.camp || 0), com: q, base: base, bruto: (r.bruto != null ? r.bruto : base), neg: regra.com };
-    if (r.devFlag || base <= 0 || q === 0) { dev.push(linha); return; }
-    const p = (r.pctDado != null) ? r.pctDado : truncPct(q / base);
-    linha.pct = p;
-    linha.dif = q - base * regra.com;      // cobrado - negociado (assinado)
-    linha.difAbs = Math.abs(linha.dif);
-    if (Math.abs(p - negPct) <= TOL + 1e-9) ok.push(linha);
-    else if (p > negPct) mais.push(linha);   // cobrado a MAIS -> aba principal
-    else menos.push(linha);                   // cobrado a MENOS -> aba separada
-  });
-  return { ok, mais, menos, dev, total: ok.length + mais.length + menos.length + dev.length };
-}
-
-function matchCanal(mkt){
-  const m = String(mkt || '').trim().toLowerCase();
-  if (!m) return null;
-  for (const c of CANAIS){
-    const keys = [c.toLowerCase(), ...(ALIAS[c] || []).map(a => a.toLowerCase())];
-    if (keys.some(k => m.includes(k) || k.includes(m))) return c;
-  }
-  return null;
-}
-
-function acharAba(wb){
-  for (const n of wb.SheetNames){
-    const hdr = XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, range:0 })[0] || [];
-    if (hdr.includes('Valor bruto')) return n;
-  }
-  return wb.SheetNames[0];
-}
-
-function parseData(v){
-  if (v instanceof Date) return v;
-  if (typeof v === 'number') { const d = XLSX.SSF.parse_date_code(v); return new Date(d.y, d.m-1, d.d, d.H||0, d.M||0, Math.floor(d.S||0)); }
-  if (typeof v === 'string'){
-    const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-    if (m){ let a = +m[3]; if (a < 100) a += 2000; return new Date(a, +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0), +(m[6]||0)); }
-    const d = new Date(v); if (!isNaN(d)) return d;
-  }
-  return null;
-}
-const num = v => { if (typeof v === 'number') return v; if (v == null || v === '') return 0; const s = String(v).replace(/[^\d,.-]/g,''); const n = parseFloat(s.replace(/\./g,'').replace(',','.')); return isNaN(n) ? 0 : n; };
-
-function extrairPedidos(wb){
-  const ws = wb.Sheets[acharAba(wb)];
-  const js = XLSX.utils.sheet_to_json(ws, { defval:null, raw:true });
-  const out = [];
-  js.forEach((r, i) => {
-    const canal = matchCanal(r['Marketplace']);
-    const sku = r['SKU'] ? String(r['SKU']).trim() : null;
-    const data = parseData(r['Data do pedido']);
-    if (!canal || !sku || !data) return;
-    out.push({ linha: i + 2, canal, pedido: r['ID do pedido'], sku, data,
-      bruto: num(r['Valor bruto']), com: num(r['Comissão']), camp: num(r['Campanhas']) });
-  });
-  return out;
-}
-
-function detectarFormato(wb){
-  for (const n of wb.SheetNames){
-    const hdr = XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, range:0 })[0] || [];
-    if (hdr.includes('SKU Lojista') || hdr.includes('Comissão Aplicada %')) return 'CB_NATIVO';
-    if (hdr.includes('price-type') && hdr.includes('item-related-fee-type')) return 'AMZ_NATIVO';
-  }
-  return 'KONCILI';
-}
-function acharAbaCB(wb){
-  for (const n of wb.SheetNames){
-    const hdr = XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, range:0 })[0] || [];
-    if (hdr.includes('SKU Lojista')) return n;
-  }
-  return wb.SheetNames[0];
-}
-function extrairPedidosCB(wb){
-  const ws = wb.Sheets[acharAbaCB(wb)];
-  const js = XLSX.utils.sheet_to_json(ws, { defval:null, raw:true });
-  const out = [];
-  js.forEach((r, i) => {
-    const sku = r['SKU Lojista'] ? String(r['SKU Lojista']).trim() : null;
-    const data = parseData(r['Data do Pedido Incluído']);
-    if (!sku || !data) return;
-    const U = num(r['Valor da Transação']);
-    let W = num(r['Comissão Aplicada %']); if (W > 100) W = W / 100; if (W > 0 && W <= 1) W = W * 100;  // aceita 0,105 · 10,5 · 1050 (csv)
-    const X = num(r['Comissão Aplicada R$']);
-    const tipo = String(r['Tipo da Transação'] || '').trim().toUpperCase();
-    out.push({ linha: i + 2, canal: 'Casas Bahia', pedido: r['Número Pedido'], sku, data,
-      base: U, bruto: U, camp: 0, comRS: (X || U * W / 100), com: (X || U * W / 100),
-      pctDado: W, devFlag: (tipo === 'CANCELAMENTO') });
-  });
-  return out;
-}
-function acharAbaAMZ(wb){
-  for (const n of wb.SheetNames){
-    const hdr = XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, range:0 })[0] || [];
-    if (hdr.includes('price-type') && hdr.includes('item-related-fee-type')) return n;
-  }
-  return wb.SheetNames[0];
-}
-// Repasse nativo Amazon (settlement): várias linhas por pedido → agrupa por pedido+SKU.
-// Comissão = |Commission| ÷ (Principal − |Promoção|). Principal = price-amount onde price-type='Principal'.
-function extrairPedidosAMZ(wb){
-  const ws = wb.Sheets[acharAbaAMZ(wb)];
-  const js = XLSX.utils.sheet_to_json(ws, { defval:null, raw:true });
-  const g = {};
-  js.forEach((r, i) => {
-    const order = r['order-id'] ? String(r['order-id']).trim() : '';
-    const sku = r['sku'] ? String(r['sku']).trim() : '';
-    if (!order || !sku) return;
-    const key = order + '||' + sku;
-    let d = g[key];
-    if (!d){ d = g[key] = { canal:'Amazon', pedido:order, sku, data:null, principal:0, promo:0, comm:0, linha:i+2 }; }
-    if (String(r['price-type'] || '').trim() === 'Principal') d.principal += num(r['price-amount']);
-    if (String(r['item-related-fee-type'] || '').trim() === 'Commission') d.comm += num(r['item-related-fee-amount']);
-    d.promo += num(r['promotion-amount']);
-    if (!d.data){ const dt = parseData(r['posted-date']); if (dt) d.data = dt; }
-  });
-  const out = [];
-  Object.values(g).forEach(d => {
-    if (!d.data) return;
-    const base = d.principal - Math.abs(d.promo);
-    const q = Math.abs(d.comm);
-    out.push({ linha:d.linha, canal:'Amazon', pedido:d.pedido, sku:d.sku, data:d.data,
-      base:base, bruto:d.principal, camp:-Math.abs(d.promo), comRS:q, com:q,
-      devFlag:(d.principal <= 0 || q === 0) });
-  });
-  return out;
-}
-function numRegra(v){
-  if (typeof v === 'number') return v > 1 ? v / 100 : v;
-  if (v == null) return null;
-  let s = String(v).trim(); const pct = s.includes('%');
-  s = s.replace('%','').trim();
-  if (s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
-  const n = parseFloat(s);
-  if (isNaN(n)) return null;
-  let c = pct ? n / 100 : n;
-  if (c > 1) c = c / 100;
-  return c;
-}
-
-function regrasDeWs(ws){
-  const lista = [];
-  XLSX.utils.sheet_to_json(ws, { header:1, defval:null }).forEach(r => {
-    if (!r || !r[0] || String(r[0]).toLowerCase() === 'sku') return;
-    const com = numRegra(r[1]), ini = parseData(r[2]), fim = parseData(r[3]);
-    if (com == null || !ini || !fim) return;
-    ini.setHours(0,0,0,0); fim.setHours(23,59,59,999);
-    lista.push({ sku: String(r[0]).trim(), com, ini, fim });
-  });
-  return lista;
-}
-
-function extrairRegrasXlsx(wb){
-  const map = {};
-  CANAIS.forEach(c => map[c] = []);
-  wb.SheetNames.forEach(n => {
-    const canal = matchCanal(n);
-    if (canal) map[canal] = map[canal].concat(regrasDeWs(wb.Sheets[n]));
-  });
-  return map;
-}
-
-// ---------- links → download direto ----------
-function gsId(link){ return /docs\.google\.com\/spreadsheets/.test(link) ? (link.match(/\/d\/([^/?#]+)/) || [])[1] : null; }
-
-function urlDireta(link){
-  const l = link.trim();
-  if (/\.xlsx(\?|$)/i.test(l) && !/1drv|onedrive|sharepoint/i.test(l)) return l;
-  if (/sharepoint\.com/i.test(l)) return l.split('?')[0] + '?download=1';
-  const token = 'u!' + btoa(l).replace(/\//g,'_').replace(/\+/g,'-').replace(/=+$/,'');
-  return `https://api.onedrive.com/v1.0/shares/${token}/root/content`;
-}
-
-// Google Sheets: lê via JSONP (tag <script>), que funciona inclusive com o app aberto de arquivo local (file://)
-function gvizTab(id, sheetName){
-  return new Promise((resolve, reject) => {
-    const cb = '__gv' + Math.random().toString(36).slice(2);
-    const s = document.createElement('script');
-    const done = (fn, v) => { try { delete window[cb]; } catch(e){} s.remove(); clearTimeout(tm); fn(v); };
-    window[cb] = resp => done(resolve, resp);
-    const tm = setTimeout(() => done(reject, new Error('timeout')), 12000);
-    s.src = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json;responseHandler:${cb}` +
-      (sheetName ? `&sheet=${encodeURIComponent(sheetName)}` : '') + `&t=${Date.now()}`;
-    s.onerror = () => done(reject, new Error('rede'));
-    document.head.appendChild(s);
-  });
-}
-function regrasDeGviz(resp){
-  const lista = [];
-  const parseGD = c => {
-    if (!c) return null;
-    // usar SEMPRE o valor real do gviz (Date(ano,mes,dia)) primeiro — o texto
-    // formatado ("16/jun.") faz o motor do navegador entender ano 2001.
-    const m = String(c.v || '').match(/Date\((\d+),(\d+),(\d+)/);
-    if (m) return new Date(+m[1], +m[2], +m[3]);
-    if (c.f){ const d = parseData(c.f); if (d) return d; }
-    return parseData(c.v);
-  };
-  const rows = (resp.table && resp.table.rows) || [];
-  // gviz pode usar a 1ª linha como rótulos; se os rótulos forem SKU/Comissão, os dados começam nas rows
-  for (const row of rows){
-    const c = row.c || [];
-    const sku = c[0] && c[0].v != null ? String(c[0].v).trim() : '';
-    if (!sku || sku.toLowerCase() === 'sku') continue;
-    const com = c[1] ? numRegra(c[1].v != null ? c[1].v : c[1].f) : null;
-    const ini = parseGD(c[2]), fim = parseGD(c[3]);
-    if (com == null || !ini || !fim) continue;
-    ini.setHours(0,0,0,0); fim.setHours(23,59,59,999);
-    lista.push({ sku, com, ini, fim });
-  }
-  return lista;
-}
-function mapaDeGviz(resp){
-  const m = {}; const rows = (resp.table && resp.table.rows) || [];
-  for (const row of rows){
-    const c = row.c || [];
-    const ped = c[1] && c[1].v != null ? normPed(c[1].v) : '';
-    const sku = c[2] && c[2].v != null ? String(c[2].v).trim() : '';
-    if (!ped || !sku || ped.toLowerCase() === 'pedido') continue;
-    m[ped] = sku;
-  }
-  return m;
-}
-function mapaDeWb(wb){
-  const m = {}; const n = wb.SheetNames.find(s => s.toLowerCase().includes('pedido'));
-  if (!n) return m;
-  XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, defval:null }).forEach(r => {
-    if (!r) return;
-    const ped = normPed(r[1]); const sku = r[2] != null ? String(r[2]).trim() : '';
-    if (!ped || !sku || ped.toLowerCase() === 'pedido') return;
-    m[ped] = sku;
-  });
-  return m;
-}
-async function carregarGoogle(id){
-  const map = {}; CANAIS.forEach(c => map[c] = []);
-  const fp = lista => JSON.stringify(lista.map(g => [g.sku, g.com, +g.ini, +g.fim]));
-  let padrao = null, fpPadrao = null;
-  try { const r = await gvizTab(id, null); if (r.status === 'ok'){ padrao = regrasDeGviz(r); fpPadrao = fp(padrao); } } catch(e){}
-  let algumaDiferente = false;
-  for (const c of CANAIS){
-    try {
-      const r = await gvizTab(id, c);
-      if (r.status !== 'ok') continue;
-      const lista = regrasDeGviz(r);
-      if (!lista.length) continue;
-      // aba inexistente devolve a aba padrão: só aceita se for diferente da padrão
-      if (fpPadrao !== null && fp(lista) === fpPadrao) continue;
-      map[c] = lista; algumaDiferente = true;
-    } catch(e){}
-  }
-  // se nenhuma aba de canal própria foi encontrada, a planilha tem uma aba só → trata como Amazon
-  if (!algumaDiferente && padrao && padrao.length) map['Amazon'] = padrao;
-  else if (padrao && padrao.length && !map['Amazon'].length && fpPadrao !== fp(map['Casas Bahia']) && fpPadrao !== fp(map['Magazine Luiza'])) map['Amazon'] = padrao;
-  if (!CANAIS.some(c => map[c].length)){
-    throw new Error('não consegui ler a planilha. Verifique: (1) internet; (2) Compartilhar → "Qualquer pessoa com o link" → Leitor; (3) colunas SKU | Comissão | Inicio | Fim. Para vários canais, nomeie as abas Amazon, Casas Bahia e Magazine Luiza.');
-  }
-  try { const rm = await gvizTab(id, MAP_TAB_CB); if (rm.status === 'ok'){ const mm = mapaDeGviz(rm); if (Object.keys(mm).length) MAP_CB = mm; } } catch(e){}
-  return map;
-}
-
-// ---------- UI ----------
-let RULES = null, repWB = null, repRows = [], res = null, canalDetectado = '', repFormato = 'KONCILI', LINK = '', WEBHOOK = '';
-try { LINK = localStorage.getItem('comissoes_link') || ''; } catch(e){}
-if (!LINK && EMBED.link) LINK = EMBED.link;
-try { WEBHOOK = localStorage.getItem('comissoes_webhook') || ''; } catch(e){}
-if (!WEBHOOK && EMBED.webhook) WEBHOOK = EMBED.webhook;
-
-function setMsg(id, cls, txt){ const m = document.getElementById(id); m.className = 'msg' + (cls ? ' ' + cls : ''); m.textContent = txt || ''; }
-
-async function conectar(manual){
-  const inp = document.getElementById('linkInp');
-  if (manual && !document.getElementById('linkRow').classList.contains('hidden') && inp.value.trim()) LINK = inp.value.trim();
-  if (!LINK){ setMsg('msgCom','err','Cole o link de compartilhamento da planilha.'); return; }
-  setMsg('msgCom','info','Lendo a planilha online…');
-  try {
-    const id = gsId(LINK);
-    if (id){
-      aplicarRegrasMap(await carregarGoogle(id), 'planilha online (Google Sheets)');
-    } else {
-      const r = await fetch(urlDireta(LINK), { cache:'no-store' });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const wb = XLSX.read(new Uint8Array(await r.arrayBuffer()), { type:'array', cellDates:true });
-      aplicarRegras(wb, 'planilha online (OneDrive)');
-    }
-    try { localStorage.setItem('comissoes_link', LINK); } catch(e){}
-  } catch(e){
-    setMsg('msgCom','err','Não consegui ler a planilha pelo link: ' + e.message + ' Alternativa: carregue o arquivo manualmente no link acima.');
-  }
-}
-
-function aplicarRegras(wb, origem){ MAP_CB = mapaDeWb(wb); aplicarRegrasMap(extrairRegrasXlsx(wb), origem); }
-
-function aplicarRegrasMap(map, origem){
-  RULES = map;
-  const tot = CANAIS.map(c => `${c}: ${RULES[c].length}`).join(' · ');
-  document.getElementById('linkRow').classList.add('hidden');
-  document.getElementById('statusRow').classList.remove('hidden');
-  const nMap = Object.keys(MAP_CB).length;
-  document.getElementById('statusTxt').textContent = `${tot} SKU(s)${nMap ? ` · Mapa Casas Bahia: ${nMap} pedidos` : ''} — lida às ${new Date().toLocaleTimeString('pt-BR').slice(0,5)} da ${origem}`;
-  document.getElementById('canalTabs').classList.remove('hidden');
-  document.getElementById('regrasBox').classList.remove('hidden');
-  renderRegras(CANAIS.find(c => RULES[c].length) || CANAIS[0]);
-  setMsg('msgCom','ok','Comissões carregadas. Agora suba o repasse no item 2.');
-}
-
-let canalVis = 'Amazon';
-function renderRegras(c){
-  canalVis = c;
-  document.getElementById('canalTabs').innerHTML = CANAIS.map(x =>
-    `<div class="tab${x===c?' on':''}" onclick="renderRegras('${x}')">${x}<span class="badge">${RULES[x].length}</span></div>`).join('');
-  const fd = d => d.toLocaleDateString('pt-BR');
-  document.getElementById('regrasTbl').innerHTML = '<tr><th>SKU</th><th class="num">Comissão</th><th>Início</th><th>Fim</th></tr>' +
-    (RULES[c].length ? RULES[c].map(g => `<tr><td>${g.sku}</td><td class="num">${(g.com*100).toLocaleString('pt-BR',{minimumFractionDigits:2})}%</td><td>${fd(g.ini)}</td><td>${fd(g.fim)}</td></tr>`).join('')
-      : '<tr><td colspan="4" style="color:#999;text-align:center">Nenhum SKU cadastrado nesta aba da planilha</td></tr>');
-}
-
-function trocarLink(){
-  document.getElementById('statusRow').classList.add('hidden');
-  document.getElementById('linkRow').classList.remove('hidden');
-  document.getElementById('linkInp').value = LINK;
-}
-
-function lerArquivo(file, cb){
-  const rd = new FileReader();
-  rd.onload = e => cb(XLSX.read(new Uint8Array(e.target.result), { type:'array', cellDates:true }));
-  rd.readAsArrayBuffer(file);
-}
-document.getElementById('fCom').addEventListener('change', e => {
-  const f = e.target.files[0]; if (!f) return;
-  lerArquivo(f, wb => aplicarRegras(wb, 'cópia local "' + f.name + '"'));
-});
-
-function setDrop(id, inputId, cb){
-  const el = document.getElementById(id), inp = document.getElementById(inputId);
-  ['dragover','dragenter'].forEach(ev => el.addEventListener(ev, e => { e.preventDefault(); el.classList.add('over'); }));
-  ['dragleave','drop'].forEach(ev => el.addEventListener(ev, e => { e.preventDefault(); el.classList.remove('over'); }));
-  el.addEventListener('drop', e => { if (e.dataTransfer.files[0]) cb(e.dataTransfer.files[0]); });
-  inp.addEventListener('change', e => { if (e.target.files[0]) cb(e.target.files[0]); });
-}
-setDrop('dropRep','fRep', f => lerArquivo(f, wb => {
-  repWB = wb; repFormato = detectarFormato(wb);
-  repRows = (repFormato === 'CB_NATIVO') ? extrairPedidosCB(wb) : (repFormato === 'AMZ_NATIVO') ? extrairPedidosAMZ(wb) : extrairPedidos(wb);
-  document.getElementById('repName').textContent = f.name + (repFormato === 'CB_NATIVO' ? '  (repasse nativo Casas Bahia)' : repFormato === 'AMZ_NATIVO' ? '  (repasse settlement Amazon)' : '');
-  document.getElementById('dropRep').classList.add('ok');
-  const cont = {}; repRows.forEach(r => cont[r.canal] = (cont[r.canal]||0)+1);
-  const detectados = Object.keys(cont).sort((a,b) => cont[b]-cont[a]);
-  setMsg('msg','','');
-  if (!detectados.length){ setMsg('msg','err', repFormato === 'CB_NATIVO' ? 'Não encontrei SKU/Data no repasse Casas Bahia (colunas "SKU Lojista" e "Data do Pedido Incluído").' : repFormato === 'AMZ_NATIVO' ? 'Não encontrei pedidos no settlement da Amazon (colunas "order-id", "sku", "price-type").' : 'Nenhum canal reconhecido na coluna A (Marketplace).'); return; }
-  canalDetectado = detectados[0];
-  document.getElementById('canalRow').classList.remove('hidden');
-  const tag = document.getElementById('canalTag');
-  const sel = document.getElementById('canalSel');
-  if (detectados.length === 1){
-    tag.textContent = `${canalDetectado} (${cont[canalDetectado]} pedidos)`;
-    tag.classList.remove('hidden'); sel.classList.add('hidden');
-  } else {
-    tag.classList.add('hidden'); sel.classList.remove('hidden');
-    sel.innerHTML = detectados.map(c => `<option value="${c}">${c} (${cont[c]} pedidos)</option>`).join('');
-    sel.onchange = () => { canalDetectado = sel.value; };
-  }
-}));
-
-const fmt = v => v.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
-const fmtD = d => d.toLocaleDateString('pt-BR');
-
-function rodar(){
-  if (!RULES){ setMsg('msg','err','Conecte a planilha de comissões no item 1 antes de conciliar.'); return; }
-  const canal = canalDetectado;
-  const rules = RULES[canal] || [];
-  if (!rules.length){ setMsg('msg','err',`A aba "${canal}" da planilha online não tem SKUs cadastrados.`); return; }
-  let linhas = repRows.filter(r => r.canal === canal);
-  if (canal === 'Casas Bahia' && repFormato !== 'CB_NATIVO'){
-    if (!Object.keys(MAP_CB).length){ setMsg('msg','err','Não consegui carregar a aba "Pedidos Casas Bahia" da planilha online. Reconecte no item 1 (🔄 Atualizar agora) e tente de novo.'); return; }
-    linhas = linhas.map(r => { const real = MAP_CB[normPed(r.pedido)]; return real ? { ...r, sku: real, skuMkt: r.sku } : r; });
-  }
-  res = conciliar(linhas, rules);
-  res.canal = canal;
-  const impMais = res.mais.reduce((s,d) => s + d.difAbs, 0);
-  document.getElementById('kTotal').textContent = res.total;
-  document.getElementById('kOk').textContent = res.ok.length;
-  document.getElementById('kMais').textContent = res.mais.length;
-  document.getElementById('kMenos').textContent = res.menos.length;
-  document.getElementById('kDev').textContent = res.dev.length;
-  document.getElementById('kImp').textContent = 'R$ ' + fmt(impMais);
-  document.getElementById('resultado').classList.remove('hidden');
-  verAba('M');
-  if (res.total && getHook()) salvarSheets(res);
-  setMsg('msg','ok', res.total ? `Conciliação ${canal}: ${res.mais.length} cobrado(s) a mais e ${res.menos.length} a menos, em ${res.total} pedido(s) no período.`
-    : `Nenhum pedido de ${canal} caiu dentro dos períodos negociados — confira as datas na planilha online.`);
-}
-
-function verAba(a){
-  document.getElementById('tabM').className = 'tab' + (a==='M' ? ' on' : '');
-  document.getElementById('tabm').className = 'tab' + (a==='m' ? ' on' : '');
-  document.getElementById('tabV').className = 'tab' + (a==='V' ? ' on' : '');
-  const t = document.getElementById('tabela');
-  const tabelaDiv = (arr, cls) => '<tr><th>Linha</th><th>ID do pedido</th><th>SKU</th><th>Data</th><th class="num">Valor transação</th><th class="num">Comissão R$</th><th class="num">% cobrado</th><th class="num">% negociado</th><th class="num">Diferença R$</th></tr>' +
-      arr.map(d => `<tr><td>${d.linha}</td><td>${d.pedido||''}</td><td>${d.sku}</td><td>${fmtD(d.data)}</td><td class="num">${fmt(d.bruto)}</td><td class="num">${fmt(d.com)}</td><td class="num ${cls}">${fmt(d.pct)}%</td><td class="num">${fmt(d.neg*100)}%</td><td class="num ${cls}">${fmt(d.difAbs)}</td></tr>`).join('');
-  if (a === 'M') t.innerHTML = tabelaDiv(res.mais, 'dif');
-  else if (a === 'm') t.innerHTML = tabelaDiv(res.menos, '');
-  else t.innerHTML = '<tr><th>Linha</th><th>ID do pedido</th><th>SKU</th><th>Data</th><th class="num">Valor transação</th><th class="num">Comissão R$</th></tr>' +
-      res.dev.map(d => `<tr><td>${d.linha}</td><td>${d.pedido||''}</td><td>${d.sku}</td><td>${fmtD(d.data)}</td><td class="num">${fmt(d.bruto)}</td><td class="num">${fmt(d.com)}</td></tr>`).join('');
-}
-
-function exportar(){
-  const wb = XLSX.utils.book_new();
-  const impMais = res.mais.reduce((s,d) => s + d.difAbs, 0);
-  const impMenos = res.menos.reduce((s,d) => s + d.difAbs, 0);
-  const resumo = [['Conciliação de Comissões — ' + res.canal], [],
-    ['Gerado em', new Date().toLocaleString('pt-BR')],
-    ['Pedidos no período negociado', res.total],
-    ['Conformes', res.ok.length],
-    ['Cobrado a mais (qtd)', res.mais.length],
-    ['Cobrado a menos (qtd)', res.menos.length],
-    ['Devoluções/estornos (não avaliados)', res.dev.length],
-    ['Total cobrado a MAIS R$', Math.round(impMais*100)/100],
-    ['Total cobrado a MENOS R$', Math.round(impMenos*100)/100]];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumo), 'Resumo');
-  const hd = ['Linha origem','ID do pedido','SKU','Data do pedido','Valor transação','Comissão cobrada R$','% cobrado','% negociado','Diferença R$'];
-  const mk = arr => arr.map(d => [d.linha, d.pedido, d.sku, fmtD(d.data), d.bruto, d.com, d.pct/100, d.neg, Math.round(d.difAbs*100)/100]);
-  const addAba = (arr, nome) => {
-    const dv = mk(arr); const ws = XLSX.utils.aoa_to_sheet([hd, ...dv]);
-    for (let i = 2; i <= dv.length + 1; i++){ ['G','H'].forEach(c => { const cl = ws[c+i]; if (cl) cl.z = '0.00%'; }); ['E','F','I'].forEach(c => { const cl = ws[c+i]; if (cl) cl.z = '#,##0.00'; }); }
-    XLSX.utils.book_append_sheet(wb, ws, nome);
-  };
-  addAba(res.mais, 'Cobrado a mais');
-  addAba(res.menos, 'Cobrado a menos');
-  const hd2 = ['Linha origem','ID do pedido','SKU','Data do pedido','Valor transação','Comissão R$'];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([hd2, ...res.dev.map(d => [d.linha, d.pedido, d.sku, fmtD(d.data), d.bruto, d.com])]), 'Devoluções-Estornos');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['SKU','Comissão','Início','Fim'], ...RULES[res.canal].map(g => [g.sku, g.com, fmtD(g.ini), fmtD(g.fim)])]), 'Regras aplicadas');
-  const nome = `Conciliação ${res.canal} - ${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.xlsx`;
-  XLSX.writeFile(wb, nome);
-  document.getElementById('expInfo').textContent = 'Arquivo gerado: ' + nome;
-}
-
-const r2 = x => Math.round((+x || 0) * 100) / 100;
-function payloadDe(res){
-  const lin = [];
-  res.mais.forEach(d => lin.push(['Cobrado a mais', d.linha, d.pedido, d.sku, fmtD(d.data), r2(d.bruto), r2(d.com), r2(d.pct), r2(d.neg*100), r2(d.difAbs)]));
-  res.menos.forEach(d => lin.push(['Cobrado a menos', d.linha, d.pedido, d.sku, fmtD(d.data), r2(d.bruto), r2(d.com), r2(d.pct), r2(d.neg*100), r2(d.difAbs)]));
-  return {
-    geradoEm: new Date().toLocaleString('pt-BR'),
-    canal: res.canal,
-    resumo: { total: res.total, ok: res.ok.length, mais: res.mais.length, menos: res.menos.length, dev: res.dev.length,
-      impMais: r2(res.mais.reduce((s,d)=>s+d.difAbs,0)), impMenos: r2(res.menos.reduce((s,d)=>s+d.difAbs,0)) },
-    linhas: lin
-  };
-}
-function getHook(){
-  const f = document.getElementById('hookInp');
-  const v = (f && f.value ? f.value.trim() : '') || WEBHOOK;
-  if (v && v !== WEBHOOK){ WEBHOOK = v; try { localStorage.setItem('comissoes_webhook', v); } catch(e){} }
-  return WEBHOOK;
-}
-function enviarSheets(payload, msgOk){
-  const hook = getHook();
-  const st = document.getElementById('hookStatus');
-  if (!hook){ if (st){ st.textContent = '⚠️ Cole o link do webhook e clique em Salvar webhook.'; st.style.color = '#C00000'; } return; }
-  if (st){ st.textContent = '💾 Enviando ao Google Sheets…'; st.style.color = '#888'; }
-  fetch(hook, { method:'POST', mode:'no-cors', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(payload) })
-    .then(() => { if (st){ st.textContent = msgOk; st.style.color = '#1e7e34'; } })
-    .catch(e => { if (st){ st.textContent = '⚠️ Falha ao enviar: ' + e.message + ' — confira se a implantação está como "Qualquer pessoa".'; st.style.color = '#C00000'; } });
-}
-function salvarSheets(res){
-  enviarSheets(payloadDe(res), '✅ Enviado ao Google Sheets (' + res.canal + ' · ' + new Date().toLocaleTimeString('pt-BR').slice(0,5) + '). Confira na planilha.');
-}
-function testarHook(){
-  enviarSheets({ geradoEm: new Date().toLocaleString('pt-BR'), canal: 'TESTE',
-    resumo: { total:1, ok:1, mais:0, menos:0, dev:0, impMais:0, impMenos:0 },
-    linhas: [['Cobrado a mais', 0, 'TESTE-PEDIDO', 'SKU-TESTE', new Date().toLocaleDateString('pt-BR'), 100, 10, 10, 10, 0]] },
-    '✅ Teste enviado — veja se apareceu uma linha "TESTE" na planilha de resultados.');
-}
-function salvarHook(){
-  const v = document.getElementById('hookInp').value.trim();
-  WEBHOOK = v;
-  try { localStorage.setItem('comissoes_webhook', v); } catch(e){}
-  const st = document.getElementById('hookStatus');
-  if (st){ st.textContent = v ? '✅ Webhook salvo — os próximos resultados vão direto para o Google Sheets.' : 'Webhook removido.'; st.style.color = v ? '#1e7e34' : '#888'; }
-}
-function baixarApp(){
-  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  const marcado = html.replace(/\/\*__CFG_START__\*\/[\s\S]*?\/\*__CFG_END__\*\//,
-    '/*__CFG_START__*/' + JSON.stringify({ link: LINK, webhook: WEBHOOK }) + '/*__CFG_END__*/');
-  const blob = new Blob([marcado], { type:'text/html' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'Conciliador de Comissões.html';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function mostrarView(v){
-  const views = { conc:'view-conc', difal:'view-difal', difal2:'view-difal2' };
-  const tabs = { conc:'tabConc', difal:'tabDifal', difal2:'tabDifal2' };
-  for (const k in views){
-    document.getElementById(views[k]).style.display = (k === v) ? '' : 'none';
-    document.getElementById(tabs[k]).className = 'topbtn' + (k === v ? ' on' : '');
-  }
-}
-if (WEBHOOK) document.getElementById('hookInp').value = WEBHOOK;
-if (LINK){ document.getElementById('linkInp').value = LINK; conectar(false); }
+// start
+load();
 </script>
 </body>
 </html>
