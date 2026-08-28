@@ -251,9 +251,30 @@ async function load(){
   document.getElementById('crTbWrap').innerHTML='<div class="lt" style="padding:30px;text-align:center">Carregando Contas a Receber...</div>';
   try{
     setLoad(20,'Buscando contas...');
-    // Colunas B..M -> [0]=nome(B) [1]=situação(C) [2]=vencimento(D) [3]=liquidação(E) [4]=valor(F) [5]=saldo(G) [6]=vlr_liquidado(H) [7]=recebido/flag(I) [8]=forma(J) [9]=categoria(K) [10]=histórico(L) [11]=marcador(M)
-    const rows=await fetchSheet('B1:M');
+    // Busca cabeçalho + dados. O mapeamento é POR NOME de coluna (a planilha muda de
+    // layout entre sincronizações: às vezes tem 'id_conta', às vezes não; ponto/vírgula, etc.)
+    const raw=await fetchSheet('A1:N');
     setLoad(70,'Processando...');
+
+    // --- mapeia colunas pelo cabeçalho ---
+    const norm=s=>(''+s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+    const hincl=(h,ks)=>ks.some(k=>h.includes(k));
+    const head=(raw[0]||[]).map(norm);
+    const findCol=(...ks)=>{ for(let i=0;i<head.length;i++){ if(hincl(head[i],ks)) return i; } return -1; };
+    const looksHeader = findCol('situ')>=0 && findCol('venc')>=0;
+    let iSitu,iVenc,iValor,iForma,iMarc;
+    if(looksHeader){
+      iSitu = findCol('situ');
+      iVenc = findCol('venc');
+      iForma= findCol('forma');
+      iMarc = findCol('marcador','marcado');
+      iValor= head.findIndex(h=>h==='valor');           // 'valor' exato (evita 'valor_liquidado')
+      if(iValor<0) iValor= findCol('saldo');
+    } else {                                             // fallback: layout padrão (sem id_conta)
+      iSitu=1; iVenc=2; iValor=4; iForma=8; iMarc=11;
+    }
+    const data = looksHeader ? raw.slice(1) : raw;
+    const layoutInfo = looksHeader ? 'cabeçalho detectado' : 'layout padrão';
 
     const formasSet=new Set(), marcSet=new Set();
     const cell={};                                   // cell[forma][ym]     = Σ valor (aberto)
@@ -262,13 +283,14 @@ async function load(){
     const mesesSet=new Set();
     let gAberto=0, gReceb=0, gBruto=0, gQtd=0;
 
-    for(const r of rows){
-      const situ=(r[1]||'').trim().toLowerCase();
-      const k=ym(r[2]); if(!k || (START_YM && k<START_YM)) continue;
-      const valor=num(r[4]);
-      const recebido=((r[7]||'').trim()==='1' || situ==='pago');   // recebido = flag 1 / situação paga
-      const forma=((r[8]||'').trim())||'(Sem forma)';
-      const marc =((r[11]||'').trim())||'S/Marcador';
+    for(const r of data){
+      const situ=(r[iSitu]||'').trim().toLowerCase();
+      const k=ym(r[iVenc]); if(!k || (START_YM && k<START_YM)) continue;
+      const valor=num(r[iValor]);
+      const aberto  = situ.includes('abert');
+      const recebido= hincl(situ,['pag','receb','liquid']);   // pago / recebido / liquidado
+      const forma=((r[iForma]||'').trim())||'(Sem forma)';
+      const marc =(iMarc>=0 ? (r[iMarc]||'').trim() : '')||'S/Marcador';
       mesesSet.add(k);
 
       // rodapé: TODAS as contas do mês
@@ -277,7 +299,7 @@ async function load(){
       if(recebido){ totReceb[k]=(totReceb[k]||0)+valor; gReceb+=valor; }  // Recebido = Σ valor das pagas
 
       // linhas por forma / marcador: somente "Aberto"
-      if(situ==='aberto'){
+      if(aberto){
         formasSet.add(forma);
         (cell[forma]=cell[forma]||{})[k]=(cell[forma][k]||0)+valor;
         totAtraso[k]=(totAtraso[k]||0)+valor;
@@ -308,7 +330,7 @@ async function load(){
     kp.className='kv '+(pctG>=.5?'clow':pctG>=.25?'cmid':'cok'); kp.style.color='';
     document.getElementById('kQtd').textContent=gQtd.toLocaleString('pt-BR');
 
-    document.getElementById('tStatus').textContent=rows.length.toLocaleString('pt-BR')+' títulos lidos';
+    document.getElementById('tStatus').textContent=data.length.toLocaleString('pt-BR')+' títulos · '+layoutInfo;
     document.getElementById('dRef').textContent=meses.length?(mesLabel(meses[0])+' → '+mesLabel(meses[meses.length-1])):'—';
     setLoad(100,'Pronto');
     setTimeout(()=>{document.getElementById('ov').style.display='none';document.getElementById('app').style.display='flex';},250);
