@@ -150,7 +150,7 @@ tfoot tr.recv td{color:var(--gr);}
         </div>
         <div class="kpi" style="--kc:var(--od)">
           <div class="kl">Total a Receber (Bruto)</div><div class="kv" id="kBruto" style="font-size:1.7rem">R$ --</div>
-          <div class="ks">Σ valor de todas as contas</div>
+          <div class="ks">Saldo + Valor pago</div>
         </div>
         <div class="kpi" style="--kc:var(--re)">
           <div class="kl">% Atraso Geral</div><div class="kv" id="kPct">--%</div>
@@ -171,8 +171,8 @@ tfoot tr.recv td{color:var(--gr);}
           <div id="crTbWrap"><div class="lt" style="padding:30px;text-align:center">Carregando Contas a Receber...</div></div>
         </div>
         <div class="ks" style="margin-top:8px;color:var(--mu);line-height:1.5">
-          <b>Linhas por forma:</b> soma do <b>Valor</b> apenas de contas com situação <b>"Aberto"</b>, pelo mês da <b>data de vencimento</b>.<br>
-          <b>Total a Receber</b> = Σ Valor de todas as contas do mês &nbsp;·&nbsp; <b>Recebido</b> = Σ Valor das contas <b>pagas</b> &nbsp;·&nbsp; <b>% Atraso</b> = (Total a Receber − Recebido) ÷ Total a Receber.
+          <b>Linhas por forma:</b> soma do <b>Saldo em aberto</b> (coluna P) apenas de contas com situação <b>"Aberto"</b>, pelo mês da <b>data de vencimento</b> (coluna D). Canceladas são ignoradas.<br>
+          <b>Total a Receber</b> = Σ (Saldo + Valor pago) &nbsp;·&nbsp; <b>Recebido</b> = Σ Valor pago (coluna T) &nbsp;·&nbsp; <b>% Atraso</b> = (Total a Receber − Recebido) ÷ Total a Receber.
         </div>
       </div>
 
@@ -184,7 +184,7 @@ tfoot tr.recv td{color:var(--gr);}
           <div id="marcTbWrap"><div class="lt" style="padding:24px;text-align:center">Carregando marcadores...</div></div>
         </div>
         <div class="ks" style="margin-top:8px;color:var(--mu);line-height:1.5">
-          Soma do <b>Valor</b> apenas de contas com situação <b>"Aberto"</b>, agrupado pelo <b>Marcador</b> (coluna M) e pelo mês da <b>data de vencimento</b>. Contas sem marcador entram como <b>"S/Marcador"</b>.
+          Soma do <b>Saldo em aberto</b> (coluna P) apenas de contas com situação <b>"Aberto"</b>, agrupado pelo <b>Marcador</b> (buscado por ID na aba de marcadores) e pelo mês da <b>data de vencimento</b>. Contas sem marcador entram como <b>"S/Marcador"</b>.
         </div>
       </div>
 
@@ -194,11 +194,12 @@ tfoot tr.recv td{color:var(--gr);}
 
 <script>
 // ═══════════════════════ CONFIG ═══════════════════════
-const KEY    = 'AIzaSyCpFaibN_ct8r2ywjIlKByvZkxok5ytqXI';
-const CR_ID  = '1iZgpIyu0n7Vtmqid7NelE540YgbSgSE7r9N4drCGxDg';
-const CR_ABA = 'Contas a Receber';
-// Piso opcional de mês (YYYY-MM). Vazio = mostra todos os meses que existirem na planilha.
-const START_YM = '';
+const KEY      = 'AIzaSyCpFaibN_ct8r2ywjIlKByvZkxok5ytqXI';
+const CR_ID    = '1AZ2zXJ3KsNfVmm_8eRUSZ6A8bcDxgHSiyakwMUC0HhE';
+const ABA_CR   = 'tinyerp_contas_receber_detalhes';            // dados: A=id B=situacao D=vencimento P=saldo(aberto) T=valorpago AC=forma
+const ABA_MARC = 'tinyerp_contas_receber_detalhes_marcadores'; // A=conta_id B=marcador
+// Piso opcional de mês (YYYY-MM). '' = mostra todos os meses da planilha.
+const START_YM = '2026-01';
 const MESNOME = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 // ═══════════════════════ HELPERS ═══════════════════════
@@ -213,11 +214,12 @@ function num(s){
   else { s=s.replace(/,/g,''); }
   const n=parseFloat(s); return isNaN(n)?0:n;
 }
-// Data -> 'YYYY-MM' (aceita ISO 2026-08-14T... ou BR 14/08/2026) ; senão null
+// Data -> 'YYYY-MM'. Aceita ISO (2026-08-14T...), US M/D/YYYY (6/14/2026) e BR D/M/YYYY.
 function ym(s){
   if(!s) return null; s=(''+s).trim();
-  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);          if(m) return m[1]+'-'+m[2];
-  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);         if(m) return m[3]+'-'+String(m[2]).padStart(2,'0');
+  let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);   if(m) return m[1]+'-'+m[2];
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m){ const a=+m[1], b=+m[2], mo=(a>12? b : a); return m[3]+'-'+String(mo).padStart(2,'0'); } // mês primeiro (US), a menos que a>12
   return null;
 }
 function R(v){ return 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -237,12 +239,12 @@ function aba(id,btn){
 }
 
 // ═══════════════════════ FETCH ═══════════════════════
-async function fetchSheet(range){
-  const enc=encodeURIComponent(`'${CR_ABA}'!${range}`);
-  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${CR_ID}/values/${enc}?key=${KEY}`);
+async function batchGet(ranges){
+  const q=ranges.map(r=>'ranges='+encodeURIComponent(r)).join('&');
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${CR_ID}/values:batchGet?${q}&key=${KEY}`);
   const d=await r.json();
   if(d.error) throw new Error(d.error.message);
-  return d.values||[];
+  return (d.valueRanges||[]).map(v=>v.values||[]);
 }
 
 // ═══════════════════════ LOAD + AGREGA ═══════════════════════
@@ -251,64 +253,57 @@ async function load(){
   document.getElementById('crTbWrap').innerHTML='<div class="lt" style="padding:30px;text-align:center">Carregando Contas a Receber...</div>';
   try{
     setLoad(20,'Buscando contas...');
-    // Busca cabeçalho + dados. O mapeamento é POR NOME de coluna (a planilha muda de
-    // layout entre sincronizações: às vezes tem 'id_conta', às vezes não; ponto/vírgula, etc.)
-    const raw=await fetchSheet('A1:N');
+    // 3 faixas: dados A..T (id,situacao,vencimento,saldo,valorpago), forma (AC) e a aba de marcadores (id->marcador)
+    const [main, acCol, marcRows] = await batchGet([
+      `${ABA_CR}!A2:T`,
+      `${ABA_CR}!AC2:AC`,
+      `${ABA_MARC}!A2:B`
+    ]);
     setLoad(70,'Processando...');
 
-    // --- mapeia colunas pelo cabeçalho ---
-    const norm=s=>(''+s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-    const hincl=(h,ks)=>ks.some(k=>h.includes(k));
-    const head=(raw[0]||[]).map(norm);
-    const findCol=(...ks)=>{ for(let i=0;i<head.length;i++){ if(hincl(head[i],ks)) return i; } return -1; };
-    const looksHeader = findCol('situ')>=0 && findCol('venc')>=0;
-    let iSitu,iVenc,iValor,iForma,iMarc;
-    if(looksHeader){
-      iSitu = findCol('situ');
-      iVenc = findCol('venc');
-      iForma= findCol('forma');
-      iMarc = findCol('marcador','marcado');
-      iValor= head.findIndex(h=>h==='valor');           // 'valor' exato (evita 'valor_liquidado')
-      if(iValor<0) iValor= findCol('saldo');
-    } else {                                             // fallback: layout padrão (sem id_conta)
-      iSitu=1; iVenc=2; iValor=4; iForma=8; iMarc=11;
+    // mapa id_conta -> marcador (aba de marcadores)
+    const marcMap={};
+    for(const row of marcRows){
+      const id=(row[0]||'').toString().trim(), d=(row[1]||'').trim();
+      if(id && d) marcMap[id]=d;
     }
-    const data = looksHeader ? raw.slice(1) : raw;
-    const layoutInfo = looksHeader ? 'cabeçalho detectado' : 'layout padrão';
 
+    // indices na faixa A..T: A=0(id) B=1(situacao) D=3(vencimento) P=15(saldo) T=19(valorpago)
     const formasSet=new Set(), marcSet=new Set();
-    const cell={};                                   // cell[forma][ym]     = Σ valor (aberto)
-    const cellM={};                                  // cellM[marcador][ym] = Σ valor (aberto)
-    const totReceber={}, totReceb={}, totAtraso={};  // por mês
+    const cell={};                                   // cell[forma][ym]     = Sigma saldo em aberto
+    const cellM={};                                  // cellM[marcador][ym] = Sigma saldo em aberto
+    const totReceber={}, totReceb={}, totAtraso={};  // por mes
     const mesesSet=new Set();
     let gAberto=0, gReceb=0, gBruto=0, gQtd=0;
 
-    for(const r of data){
-      const situ=(r[iSitu]||'').trim().toLowerCase();
-      const k=ym(r[iVenc]); if(!k || (START_YM && k<START_YM)) continue;
-      const valor=num(r[iValor]);
-      const aberto  = situ.includes('abert');
-      const recebido= hincl(situ,['pag','receb','liquid']);   // pago / recebido / liquidado
-      const forma=((r[iForma]||'').trim())||'(Sem forma)';
-      const marc =(iMarc>=0 ? (r[iMarc]||'').trim() : '')||'S/Marcador';
+    for(let i=0;i<main.length;i++){
+      const r=main[i];
+      const situ=(r[1]||'').trim().toLowerCase();
+      if(situ.includes('cancel')) continue;                 // ignora contas canceladas
+      const k=ym(r[3]); if(!k || (START_YM && k<START_YM)) continue;
+      const saldo=num(r[15]);                               // P = saldo em aberto
+      const vpago=num(r[19]);                               // T = valor pago
+      const aberto=situ.includes('abert');
+      const forma=(((acCol[i]||[])[0])||'').trim()||'(Sem forma)';
+      const marc =(marcMap[(r[0]||'').toString().trim()]||'').trim()||'S/Marcador';
       mesesSet.add(k);
 
-      // rodapé: TODAS as contas do mês
-      totReceber[k]=(totReceber[k]||0)+valor;                 // Total a Receber (bruto) = Σ valor
-      gBruto+=valor;
-      if(recebido){ totReceb[k]=(totReceb[k]||0)+valor; gReceb+=valor; }  // Recebido = Σ valor das pagas
+      // rodape (todas as contas ativas do mes)
+      totReceber[k]=(totReceber[k]||0)+saldo+vpago;         // Total a Receber = Sigma(saldo + valorpago)
+      totReceb[k]  =(totReceb[k]  ||0)+vpago;               // Recebido = Sigma valorpago
+      gBruto+=saldo+vpago; gReceb+=vpago;
 
-      // linhas por forma / marcador: somente "Aberto"
+      // linhas por forma / marcador: somente "Aberto" (saldo em aberto)
       if(aberto){
         formasSet.add(forma);
-        (cell[forma]=cell[forma]||{})[k]=(cell[forma][k]||0)+valor;
-        totAtraso[k]=(totAtraso[k]||0)+valor;
+        (cell[forma]=cell[forma]||{})[k]=(cell[forma][k]||0)+saldo;
+        totAtraso[k]=(totAtraso[k]||0)+saldo;
         marcSet.add(marc);
-        (cellM[marc]=cellM[marc]||{})[k]=(cellM[marc][k]||0)+valor;
-        gAberto+=valor; gQtd++;
+        (cellM[marc]=cellM[marc]||{})[k]=(cellM[marc][k]||0)+saldo;
+        gAberto+=saldo; gQtd++;
       }
     }
-
+    const nLidas=main.length;
     const meses=[...mesesSet].sort();
     const formas=[...formasSet].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     // marcadores em ordem alfabética, com "S/Marcador" sempre por último
@@ -330,7 +325,7 @@ async function load(){
     kp.className='kv '+(pctG>=.5?'clow':pctG>=.25?'cmid':'cok'); kp.style.color='';
     document.getElementById('kQtd').textContent=gQtd.toLocaleString('pt-BR');
 
-    document.getElementById('tStatus').textContent=data.length.toLocaleString('pt-BR')+' títulos · '+layoutInfo;
+    document.getElementById('tStatus').textContent=nLidas.toLocaleString('pt-BR')+' títulos lidos';
     document.getElementById('dRef').textContent=meses.length?(mesLabel(meses[0])+' → '+mesLabel(meses[meses.length-1])):'—';
     setLoad(100,'Pronto');
     setTimeout(()=>{document.getElementById('ov').style.display='none';document.getElementById('app').style.display='flex';},250);
