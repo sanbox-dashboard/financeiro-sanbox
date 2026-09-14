@@ -110,7 +110,7 @@ tfoot tr.recv td{color:var(--gr);}
   <div class="tabbar">
     <button class="tab on" onclick="aba('vCR',this)">💰 Contas a Receber</button>
     <button class="tab soon" title="Em breve">🧾 Contas a Pagar</button>
-    <button class="tab soon" title="Em breve">📈 DRE</button>
+    <button class="tab" onclick="aba('vDRE',this);loadDRE()">📈 DRE</button>
     <button class="tab soon" title="Em breve">🏦 Fluxo de Caixa</button>
   </div>
 
@@ -189,6 +189,12 @@ tfoot tr.recv td{color:var(--gr);}
       </div>
 
     </div><!-- /vCR -->
+
+    <!-- ══ DRE ══════════════════════════════════════════════════ -->
+    <div class="panel" id="vDRE" style="padding-top:10px">
+      <iframe id="dreFrame" title="Planejamento Financeiro 2026 — DRE por Competência"
+              style="width:100%;height:calc(100vh - 96px);border:1px solid var(--bd);border-radius:11px;background:#fff"></iframe>
+    </div><!-- /vDRE -->
   </div>
 </div>
 
@@ -201,6 +207,10 @@ const ABA_MARC = 'tinyerp_contas_receber_detalhes_marcadores'; // A=conta_id B=m
 // Piso opcional de mês (YYYY-MM). '' = mostra todos os meses da planilha.
 const START_YM = '2026-01';
 const MESNOME = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+// aba DRE: carrega dre.html (estrutura completa) no iframe, uma única vez
+let _dreLoaded=false;
+function loadDRE(){ if(_dreLoaded) return; _dreLoaded=true; document.getElementById('dreFrame').src='dre.html'; }
 
 // ═══════════════════════ HELPERS ═══════════════════════
 // Número em qualquer formato: BR "1.234,56" ou US "1,234.56"/"905.97" -> float
