@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sanbox — Central Financeira</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 <style>
 :root{--or:#F5A623;--od:#D4881A;--bg:#F2F5F9;--wh:#fff;--bd:#E2E8F0;--tx:#1A1F2E;--mu:#7A8799;--dm:#E2E8F0;--gr:#16A34A;--re:#DC2626;--sh:0 1px 8px rgba(0,0,0,.07);}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -89,6 +90,48 @@ tfoot tr.recv td{color:var(--gr);}
   .hdr{flex-wrap:wrap;gap:6px;}
 }
 @media(max-width:420px){.kr{grid-template-columns:1fr;}.kr .kpi:first-child{grid-column:1;}}
+
+/* ORÇAMENTO */
+.mchips{display:flex;gap:4px;flex-wrap:wrap;}
+.mchip{background:var(--wh);border:1px solid var(--bd);border-radius:999px;padding:3px 10px;font:800 .6rem 'Nunito';color:var(--mu);cursor:pointer;position:relative;}
+.mchip:hover{border-color:var(--or);color:var(--od);}
+.mchip.on{background:var(--or);border-color:var(--or);color:#fff;}
+.mchip.bad::after{content:'';position:absolute;top:-2px;right:-2px;width:7px;height:7px;border-radius:50%;background:var(--re);border:1.5px solid var(--wh);}
+.mstate{display:inline-block;font-size:.54rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--mu);margin-left:6px;}
+.mstate.cur{background:rgba(245,166,35,.15);color:var(--od);}
+.orc-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.alist{display:flex;flex-direction:column;gap:6px;}
+.alert{display:flex;gap:8px;align-items:flex-start;padding:7px 10px;border-radius:8px;font-size:.68rem;font-weight:700;line-height:1.4;}
+.alert.bad{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;}
+.alert.warn{background:#FFFBEB;color:#92400E;border:1px solid #FDE68A;}
+.alert.ok{background:#F0FDF4;color:#166534;border:1px solid #BBF7D0;}
+.alert.info{background:var(--bg);color:var(--mu);border:1px solid var(--bd);}
+.alert .ai{font-size:.8rem;line-height:1.1;}
+.ubar-row{display:grid;grid-template-columns:150px 1fr 150px;gap:10px;align-items:center;font-size:.66rem;font-weight:700;padding:4px 0;border-bottom:1px solid var(--bg);}
+.ubar-row:last-child{border-bottom:none;}
+.ubar{height:8px;background:var(--bg);border-radius:9px;overflow:hidden;position:relative;}
+.ubar>i{display:block;height:100%;border-radius:9px;}
+.ubar-v{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.ubar-v small{display:block;font-size:.58rem;color:var(--mu);font-weight:700;}
+.chwrap{position:relative;height:250px;}
+th.col-sel,td.col-sel{background:rgba(245,166,35,.12)!important;}
+tr.grp td{font-weight:900;color:var(--tx);background:var(--bg);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;}
+tr.grp td:first-child{background:var(--bg);}
+tr.sub td:first-child{padding-left:20px;color:var(--mu);}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:7px;overflow:hidden;}
+.seg button{background:var(--wh);border:none;border-right:1px solid var(--bd);padding:4px 11px;font:800 .6rem 'Nunito';color:var(--mu);cursor:pointer;}
+.seg button:last-child{border-right:none;}
+.seg button.on{background:var(--tx);color:#fff;}
+.orc-w table{font-size:var(--tf,.68rem);}
+.orc-w thead th,.orc-w tbody td,.orc-w tfoot td{font-size:var(--tf,.68rem);}
+.orc-w thead th{font-size:calc(var(--tf,.68rem) * .82);}
+.orc-w td.pc,.orc-w th.pc{color:var(--mu);font-weight:700;font-size:calc(var(--tf,.68rem) * .9);border-right:1px solid var(--bg);}
+.orc-w td.pc.cok{color:var(--gr)!important;}.orc-w td.pc.clow{color:var(--re)!important;}
+.orc-w th.mh{text-align:center;border-bottom:1px solid var(--bd);}
+.orc-w td.org{color:var(--mu);font-style:italic;font-weight:600;text-align:left;white-space:normal;min-width:220px;}
+.orc-w td.inp{color:#1D4ED8;}
+.orc-w td.hi{background:#FEF9C3;}
+@media(max-width:900px){.orc-grid{grid-template-columns:1fr;}.ubar-row{grid-template-columns:110px 1fr 120px;}}
 #err{display:none;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:10px;padding:12px 16px;font-size:.72rem;font-weight:700;}
 </style>
 </head>
@@ -109,9 +152,8 @@ tfoot tr.recv td{color:var(--gr);}
 <div class="app" id="app" style="display:none">
   <div class="tabbar">
     <button class="tab on" onclick="aba('vCR',this)">💰 Contas a Receber</button>
-    <button class="tab soon" title="Em breve">🧾 Contas a Pagar</button>
     <button class="tab" onclick="aba('vDRE',this);loadDRE()">📈 DRE</button>
-    <button class="tab soon" title="Em breve">🏦 Fluxo de Caixa</button>
+    <button class="tab" onclick="aba('vORC',this);loadORC()">🏦 Fluxo de Caixa (Orçamento)</button>
   </div>
 
   <div class="content">
@@ -195,6 +237,97 @@ tfoot tr.recv td{color:var(--gr);}
       <iframe id="dreFrame" title="Planejamento Financeiro 2026 — DRE por Competência"
               style="width:100%;height:calc(100vh - 96px);border:1px solid var(--bd);border-radius:11px;background:#fff"></iframe>
     </div><!-- /vDRE -->
+
+    <!-- ══ ORÇAMENTO ════════════════════════════════════════════ -->
+    <div class="panel" id="vORC">
+      <div class="card hdr">
+        <div class="brand">
+          <svg height="32" viewBox="0 0 210 58" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="56" height="56" rx="12" fill="#F5A623"/>
+            <rect x="11" y="11" width="34" height="34" rx="7" fill="white"/>
+            <rect x="19" y="20" width="13" height="7" rx="2" fill="#F5A623"/>
+            <text x="66" y="43" font-family="Nunito" font-weight="900" font-size="36" fill="#1A1A1A">san</text>
+            <text x="130" y="43" font-family="Nunito" font-weight="900" font-size="36" fill="#F5A623">box</text>
+          </svg>
+          <div class="bsep"></div><div class="bsub">Orçamento de Caixa 2026</div>
+        </div>
+        <div class="hc"><div class="dlbl">Mês</div><div class="dval" id="orcRef">--</div></div>
+        <div class="hr">
+          <span class="dlbl" id="orcStatus">--</span>
+          <button class="btn-sm" onclick="loadORC(true)">⟳ Atualizar</button>
+        </div>
+      </div>
+
+      <div id="orcErr" style="display:none;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:10px;padding:12px 16px;font-size:.72rem;font-weight:700;"></div>
+
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div class="mchips" id="orcMeses"></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="ks">🔴 = fornecedores acima do orçado</div>
+          <div class="seg" id="orcJan">
+            <button data-n="12" onclick="setJanela(12)">12 meses</button><button data-n="6" onclick="setJanela(6)">6 meses</button><button data-n="3" onclick="setJanela(3)">3 meses</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="kr">
+        <div class="kpi" id="kpRec"><div class="kl">Recebimento · lançado x previsto</div><div class="kv" id="kRecV">--</div><div class="ks" id="kRecS">--</div></div>
+        <div class="kpi" id="kpForn"><div class="kl">Fornecedores · lançado x orçado</div><div class="kv" id="kFornV">--</div><div class="ks" id="kFornS">--</div></div>
+        <div class="kpi" id="kpSobra"><div class="kl">Sobra de caixa do mês</div><div class="kv" id="kSobraV">--</div><div class="ks" id="kSobraS">--</div></div>
+        <div class="kpi" id="kpCaixa"><div class="kl">Caixa no fim do mês</div><div class="kv" id="kCaixaV">--</div><div class="ks" id="kCaixaS">--</div></div>
+        <div class="kpi" id="kpEst"><div class="kl">Estouros no ano</div><div class="kv" id="kEstV">--</div><div class="ks" id="kEstS">--</div></div>
+      </div>
+
+      <div class="orc-grid">
+        <div class="card">
+          <div class="atitle"><div class="atit"><div class="pdot"></div>Alertas do mês</div><span id="orcMState"></span></div>
+          <div class="alist" id="orcAlerts"></div>
+        </div>
+        <div class="card">
+          <div class="atitle"><div class="atit"><div class="pdot"></div>Uso do orçamento por linha</div><div class="dlbl">lançado ÷ orçado</div></div>
+          <div id="orcBars"></div>
+        </div>
+      </div>
+
+      <div class="orc-grid">
+        <div class="card">
+          <div class="atitle"><div class="atit"><div class="pdot"></div>Recebimento previsto x realizado e caixa</div></div>
+          <div class="chwrap"><canvas id="orcChRec"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="atitle"><div class="atit"><div class="pdot"></div>Fornecedores: teto x lançado</div></div>
+          <div class="chwrap"><canvas id="orcChForn"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="atitle">
+          <div class="atit"><div class="pdot"></div>Premissas do orçamento</div>
+          <a class="btn-sm" id="orcEdit" target="_blank" rel="noopener" style="text-decoration:none">✏️ Editar premissas na planilha</a>
+        </div>
+        <div class="tscroll"><div id="orcPremWrap" class="orc-w"></div></div>
+        <div class="ks" style="margin-top:8px;color:var(--mu);line-height:1.5">
+          As premissas são editadas mês a mês na aba <b>Orçamento</b> (linhas 6 a 15). Linhas em % aplicam-se sobre a previsão de recebimento do mês; linhas em R$ são valores fixos. Clique em ⟳ Atualizar depois de editar.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="atitle">
+          <div class="atit"><div class="pdot"></div><span id="orcTbTit">Orçado x realizado por mês (R$ mil e % do recebimento)</span></div>
+          <div class="dlbl">saldo positivo = dentro do orçamento</div>
+        </div>
+        <div class="tscroll"><div id="orcTbWrap" class="orc-w"><div class="lt" style="padding:30px;text-align:center">Carregando orçamento...</div></div></div>
+        <div class="ks" style="margin-top:8px;color:var(--mu);line-height:1.5">
+          Fonte: aba <b>Orçamento</b> da planilha Fluxo de Caixa Sanbox. A previsão de recebimento vem do <b>Fluxo Resumido</b>; o realizado soma as linhas das abas mensais.
+          <b>Orçado</b> = premissa do mês (% da previsão ou valor fixo); a dívida segue o cronograma lançado. <b>Sobra orçada</b> = previsão − total orçado.
+          <b>Teto p/ meta</b> = quanto fornecedores pode ser para a sobra atingir a meta do mês.
+          A coluna <b>%</b> mostra o peso sobre o recebimento: orçado sobre a previsão; lançado sobre o recebido nos meses fechados e sobre a previsão no mês em andamento e nos futuros.
+          O mês em andamento e os futuros mostram o que já está <b>lançado</b>, incluindo valores previstos nas abas mensais.
+          <b>Lançado OC</b> = parcelas das ordens de compra (linha "Ordem de Compra" das abas mensais); abatem o saldo de fornecedores e entram no total de saídas, na sobra e no caixa.
+          <b>Caixa projetado</b> usa a previsão de recebimento e o maior valor entre as saídas lançadas e o total orçado.
+        </div>
+      </div>
+    </div><!-- /vORC -->
   </div>
 </div>
 
@@ -246,6 +379,7 @@ function aba(id,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.getElementById(id).classList.add('on'); btn.classList.add('on');
+  _orcAtivo=(id==='vORC');
 }
 
 // ═══════════════════════ FETCH ═══════════════════════
@@ -429,11 +563,412 @@ function renderMarcador(meses,marcs,cellM,totAtraso){
   document.getElementById('marcTbWrap').innerHTML=`<table>${h}${b}${f}</table>`;
 }
 
+// ═══════════════════════ ORÇAMENTO ═══════════════════════
+// Lê a aba "Orçamento" da planilha Fluxo de Caixa Sanbox (valores crus, sem formatação).
+const FC_ID   = '1X7SLWES0k3dBipO2uNXZiLVCalSEGF1nbWuqKtpRN8o';
+const ABA_ORC = 'Orçamento';
+const ORC_GID = 900100100;
+const ORC_ANO = 2026;
+const ORC_CATS = [ // [rótulo exibido, linha no bloco Orçamento, linha no bloco Realizado]
+  ['Fornecedores',       'Fornecedores',                'Fornecedores'],
+  ['Frete',              'Frete',                       'Frete'],
+  ['Impostos e DIFAL',   'Impostos e DIFAL',            'Impostos e DIFAL'],
+  ['Importação',         'Importação',                  'Importação'],
+  ['Gateway e tarifas',  'Gateway e tarifas',           'Gateway e tarifas'],
+  ['Pessoal',            'Pessoal',                     'Pessoal'],
+  ['Sócios',             'Sócios',                      'Sócios'],
+  ['Estrutura e galpão', 'Estrutura, galpão e outros',  'Estrutura, galpão e outros'],
+  ['Dívida',             'Dívida (cronograma lançado)', 'Dívida'],
+  ['Total de saídas',    'Total de saídas orçado',      'Total de saídas']
+];
+let ORC=null, orcMes=null, orcCh={}, _orcAtivo=false, _orcPromise=null, _orcRaw=null, _orcErro=null;
+let orcJanela=(()=>{ try{ return +localStorage.getItem('orcJanela')||12; }catch(e){ return 12; } })();
+
+// Os dados do orçamento são buscados assim que a página abre (em paralelo com Contas a Receber)
+// e guardados no navegador; ao abrir a aba, mostra a última cópia na hora e atualiza em seguida.
+const ORC_CACHE='orcCache_v1';
+function cacheLer(){ try{ return JSON.parse(localStorage.getItem(ORC_CACHE)||'null'); }catch(e){ return null; } }
+function cacheGravar(v){ try{ localStorage.setItem(ORC_CACHE,JSON.stringify({t:Date.now(),v})); }catch(e){} }
+function hhmm(t){ return new Date(t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+
+async function baixarORC(){
+  const rng=encodeURIComponent(`'${ABA_ORC}'!A1:O70`);
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${FC_ID}/values/${rng}?valueRenderOption=UNFORMATTED_VALUE&key=${KEY}`);
+  const d=await r.json(); if(d.error) throw new Error(d.error.message);
+  return d.values||[];
+}
+function prefetchORC(){
+  if(_orcPromise) return _orcPromise;
+  _orcErro=null;
+  _orcPromise=baixarORC().then(v=>{
+    _orcRaw={t:Date.now(),v}; cacheGravar(v);
+    if(_orcAtivo) aplicarORC(_orcRaw,true);
+  }).catch(e=>{
+    _orcErro=e; _orcPromise=null;
+    if(_orcAtivo) mostrarErroORC(e);
+  });
+  return _orcPromise;
+}
+function aplicarORC(pkt,aoVivo){
+  const st=document.getElementById('orcStatus'), er=document.getElementById('orcErr');
+  try{
+    const o=parseORC(pkt.v);
+    if(!o.orc['Previsão de recebimento']||!o.real['Recebimento']||!o.prem['Fornecedores'])
+      throw new Error('estrutura da aba Orçamento não reconhecida');
+    ORC=o; er.style.display='none';
+    if(orcMes==null) orcMes=mesHoje();
+    renderORC();
+    st.textContent=aoVivo?('Atualizado às '+hhmm(pkt.t)):('Dados de '+hhmm(pkt.t)+' · atualizando...');
+  }catch(e){ mostrarErroORC(e); }
+}
+function mostrarErroORC(e){
+  const er=document.getElementById('orcErr');
+  er.style.display='block'; er.textContent='Erro ao carregar o orçamento: '+e.message;
+  document.getElementById('orcStatus').textContent=ORC?'Mostrando a última cópia':'—';
+}
+function loadORC(force){
+  _orcAtivo=true;
+  document.getElementById('orcEdit').href=`https://docs.google.com/spreadsheets/d/${FC_ID}/edit#gid=${ORC_GID}&range=A5:O16`;
+  if(force){ _orcPromise=null; _orcRaw=null; document.getElementById('orcStatus').textContent='Atualizando...'; prefetchORC(); return; }
+  if(_orcRaw){ aplicarORC(_orcRaw,true); return; }        // já chegou da pré-busca
+  const c=cacheLer();
+  if(c) aplicarORC(c,false);                              // mostra a última cópia na hora
+  else document.getElementById('orcStatus').textContent='Carregando...';
+  if(_orcErro) mostrarErroORC(_orcErro);
+  prefetchORC();
+}
+
+// separa a aba em blocos pelos títulos de seção
+function parseORC(rows){
+  const v=x=>typeof x==='number'?x:num(x);
+  const s={prem:{},orc:{},real:{}}; let cur='prem';
+  for(const r of rows){
+    const lab=((r[0]??'')+'').trim(); if(!lab) continue;
+    if(lab.startsWith('Orçamento (R$)')){cur='orc';continue;}
+    if(lab.startsWith('Realizado e lançado')){cur='real';continue;}
+    if(lab.startsWith('Orçado x realizado')){cur='fim';continue;}
+    if(cur==='fim') break;
+    const a=[]; for(let i=2;i<14;i++) a.push(v(r[i]));
+    if(cur==='prem'){
+      const un=((r[1]??'')+'').trim();
+      if(!/%|R\$/.test(un)) continue;                       // só linhas de premissa (com unidade)
+      s.prem[lab]={un, pct:un.includes('%'), vals:a, org:((r[14]??'')+'').trim()};
+      continue;
+    }
+    s[cur][lab]=a;
+  }
+  return s;
+}
+
+function mesHoje(){ const d=new Date(), y=d.getFullYear(); return y===ORC_ANO?d.getMonth():(y>ORC_ANO?11:0); }
+function oG(k,m){ const a=ORC.orc[k]; return a?(a[m]||0):0; }
+function rG(k,m){ const a=ORC.real[k]; return a?(a[m]||0):0; }
+function pG(k,m,def){ const p=ORC.prem[k]; return p?(p.vals[m]??def):def; }
+function metaSobra(m){ return pG('Sobra de caixa mínima',m,0.05); }
+function limEstr(m){ return pG('Limite de estrutura',m,0.02); }
+function estadoMes(m){ const h=mesHoje(); return m<h?'Fechado':(m===h?'Em andamento':'Projeção'); }
+// fornecedores lançados nas abas + ordens de compra (parcelas projetadas)
+function fornOC(m){ return rG('Fornecedores OC',m); }
+function fornTot(m){ return rG('Fornecedores',m)+fornOC(m); }
+// realizado de uma categoria; fornecedores soma as OCs
+function realCat(lab,kr,m){ return lab==='Fornecedores'?fornTot(m):rG(kr,m); }
+function saldoForn(m){ return oG('Fornecedores',m)-fornTot(m); }
+function tetoMeta(m){ return oG('Teto de fornecedores para a sobra mínima',m); }
+// base do % do lançado: recebido nos meses fechados; previsão no mês atual e nos futuros
+function baseReal(m){ return m<mesHoje()?rG('Recebimento',m):oG('Previsão de recebimento',m); }
+// sobra que vale para o mês: realizada se fechado; projetada se em andamento/futuro
+function sobraMes(m){
+  if(m<mesHoje()) return rG('Sobra de caixa',m);
+  return oG('Previsão de recebimento',m)-Math.max(rG('Total de saídas',m),oG('Total de saídas orçado',m));
+}
+
+// caixa projetado: meses fechados usam o realizado; a partir do mês atual encadeia a sobra projetada
+function caixaProj(){
+  const h=mesHoje(), out=[]; let c=null;
+  for(let m=0;m<12;m++){
+    if(m<h){ c=rG('Caixa no fim do mês',m); out.push(null); continue; }
+    if(c==null) c=rG('Caixa no início do mês',m);
+    c+=sobraMes(m); out.push(c);
+  }
+  if(h>0) out[h-1]=rG('Caixa no fim do mês',h-1);
+  return out;
+}
+
+// janela de meses exibida (12, 6 ou 3), sempre contendo o mês selecionado
+function janela(){
+  const n=orcJanela, m=orcMes;
+  if(n>=12) return [0,1,2,3,4,5,6,7,8,9,10,11];
+  const ini=Math.max(0,Math.min(12-n, m-(n===6?2:1)));
+  return Array.from({length:n},(_,i)=>ini+i);
+}
+// valor compacto para a visão de 3 meses: 758 mil, 4,95 mi
+function Rc(v){
+  v=v||0; const a=Math.abs(v), sg=v<0?'-':'';
+  if(a>=1e6) return sg+(a/1e6).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' mi';
+  if(a>=1e3) return sg+(a/1e3).toLocaleString('pt-BR',{maximumFractionDigits:a>=1e5?0:1})+' mil';
+  return sg+Math.round(a).toLocaleString('pt-BR');
+}
+function setJanela(n){ orcJanela=n; try{ localStorage.setItem('orcJanela',n); }catch(e){} if(ORC) renderORC(); }
+
+function renderORC(){
+  const m=orcMes, h=mesHoje();
+  document.getElementById('orcRef').textContent=MESNOME[m+1]+'/'+String(ORC_ANO).slice(2);
+  document.querySelectorAll('#orcJan button').forEach(b=>b.classList.toggle('on',+b.dataset.n===orcJanela));
+  const tf={12:'.68rem',6:'.82rem',3:'.98rem'}[orcJanela]||'.68rem';
+  document.querySelectorAll('.orc-w').forEach(el=>el.style.setProperty('--tf',tf));
+
+  // seletor de meses
+  document.getElementById('orcMeses').innerHTML=MESNOME.slice(1).map((n,i)=>{
+    const bad=i<=h && saldoForn(i)<-1;
+    return `<button class="mchip${i===m?' on':''}${bad?' bad':''}" onclick="orcMes=${i};renderORC()">${n}</button>`;
+  }).join('');
+
+  const prev=oG('Previsão de recebimento',m), rec=rG('Recebimento',m);
+  const fo=oG('Fornecedores',m), forn=fornTot(m), oc=fornOC(m), sf=fo-forn, teto=tetoMeta(m);
+  const meta=metaSobra(m), fut=m>h, fech=m<h;
+  const sobra=sobraMes(m), base=fech?rec:prev, sobraP=base?sobra/base:0;
+  const sOrcP=oG('Sobra orçada (% da previsão)',m);
+  const cxFim=rG('Caixa no fim do mês',m), proj=caixaProj();
+
+  // KPI recebimento
+  const falta=prev-rec>1, pRec=prev?rec/prev:0;
+  setKpi('kpRec','kRecV','kRecS',Rk(rec),
+    `${P(pRec)} de ${Rk(prev)} previstos`+(falta?` · faltam ${Rk(prev-rec)}`:''),
+    !falta?'var(--gr)':(fut?'var(--or)':'var(--re)'));
+  // KPI fornecedores (contra o orçado da premissa)
+  setKpi('kpForn','kFornV','kFornS',(sf<0?'− ':'')+Rk(Math.abs(sf)),
+    `${sf<0?'acima do orçado':'livres'} · ${Rk(forn)}${oc?` (OC ${Rk(oc)})`:''} de ${Rk(fo)} (${P(pG('Fornecedores',m,0))}) · teto p/ meta ${Rk(teto)}`,
+    sf<-1?'var(--re)':'var(--gr)');
+  // KPI sobra
+  setKpi('kpSobra','kSobraV','kSobraS',(sobra<0?'− ':'')+Rk(Math.abs(sobra)),
+    `${fech?'realizada':'projetada'}: ${P(sobraP)} · orçada ${P(sOrcP)} · meta ${P(meta)}`,
+    sobraP>=meta?'var(--gr)':(sobraP>=0?'var(--or)':'var(--re)'));
+  // KPI caixa
+  const cxShow=m>=h&&proj[m]!=null?proj[m]:cxFim;
+  setKpi('kpCaixa','kCaixaV','kCaixaS',(cxShow<0?'− ':'')+Rk(Math.abs(cxShow)),
+    m>=h?`projetado · lançado hoje: ${Rk(cxFim)}`:`início do mês: ${Rk(rG('Caixa no início do mês',m))}`,
+    cxShow<0?'var(--re)':'#1A1F2E');
+  // KPI estouros no ano (fornecedores x orçado, meses até o atual)
+  const est_m=[]; for(let i=0;i<=Math.min(h,11);i++){ if(saldoForn(i)<-1) est_m.push(i); }
+  const totEst=est_m.reduce((a,i)=>a+saldoForn(i),0);
+  setKpi('kpEst','kEstV','kEstS',est_m.length+' de '+(Math.min(h,11)+1)+' meses',
+    est_m.length?`fornecedores acima do orçado em ${est_m.map(i=>MESNOME[i+1]).join(', ')} · ${Rk(Math.abs(totEst))}`:'nenhum estouro de fornecedores',
+    est_m.length?'var(--re)':'var(--gr)');
+
+  document.getElementById('orcMState').innerHTML=`<span class="mstate${m===h?' cur':''}">${estadoMes(m)}</span>`;
+
+  renderAlertas(m);
+  renderBarras(m);
+  renderGraficos(proj);
+  renderPremissas(m);
+  renderTabelaORC(m);
+}
+
+function setKpi(box,vid,sid,val,sub,cor){
+  document.getElementById(box).style.setProperty('--kc',cor);
+  const v=document.getElementById(vid); v.textContent=val; v.style.fontSize=val.length>13?'1.55rem':'';
+  document.getElementById(sid).textContent=sub;
+}
+
+function renderAlertas(m){
+  const h=mesHoje(), fut=m>h, fech=m<h, A=[];
+  const prev=oG('Previsão de recebimento',m), rec=rG('Recebimento',m), meta=metaSobra(m);
+  if(!prev) A.push(['warn','⚠️','Sem previsão de recebimento para o mês. Preencha a linha 84 do Fluxo Resumido para calcular o orçamento.']);
+  else if(prev-rec>1){
+    if(fut) A.push(['info','ℹ️',`Recebimento lançado até agora: ${Rk(rec)} de ${Rk(prev)} previstos.`]);
+    else A.push(['bad','🔻',`Recebimento ${Rk(prev-rec)} abaixo da previsão (${P(rec/prev)} do previsto).`]);
+  } else A.push(['ok','✅',rec-prev>1?`Recebimento ${Rk(rec-prev)} acima da previsão.`:'Recebimento igual à previsão.']);
+
+  // o próprio orçamento já prevê sobra abaixo da meta?
+  const sOrcP=oG('Sobra orçada (% da previsão)',m), teto=tetoMeta(m), fo=oG('Fornecedores',m);
+  if(prev && sOrcP<meta-0.0005){
+    A.push(['warn','📐',`O orçamento do mês já prevê sobra de ${P(sOrcP)}, abaixo da meta de ${P(meta)}. Para atingir a meta, fornecedores teria que ficar em até ${Rk(teto)} (${P(prev?teto/prev:0)} da previsão), e não ${Rk(fo)} (${P(pG('Fornecedores',m,0))}).`]);
+  }
+
+  for(const [lab,ko,kr] of ORC_CATS){
+    if(lab==='Dívida') continue;
+    const o=oG(ko,m), r=realCat(lab,kr,m);
+    const ocTx=lab==='Fornecedores'&&fornOC(m)?`, incluindo ${Rk(fornOC(m))} de ordens de compra`:'';
+    if(o>0 && r-o>1) A.push(['bad','🔴',`${lab}: ${Rk(r-o)} acima do orçado (${Rk(r)} lançados de ${Rk(o)}${ocTx}).`]);
+    else if(o>0 && r>o*0.9 && lab!=='Total de saídas') A.push(['warn','🟠',`${lab}: ${P(r/o)} do orçado já usado, sobram ${Rk(o-r)}.`]);
+  }
+
+  const estr=rG('Estrutura, galpão e outros',m), lim=limEstr(m), be=baseReal(m);
+  if(be && estr/be>lim*1.005) A.push(['bad','🏭',`Estrutura e galpão em ${P(estr/be)} do recebimento, acima do limite de ${P(lim)}.`]);
+
+  const sobra=sobraMes(m), bs=fech?rec:prev;
+  if(bs>0){
+    const sp=sobra/bs, tx=fech?'realizada':'projetada';
+    if(sp<meta) A.push(['bad','💸',`Sobra ${tx} de ${P(sp)} (${Rk(sobra)}), abaixo da meta de ${P(meta)}.`]);
+    else A.push(['ok','✅',`Sobra ${tx} de ${P(sp)}, acima da meta de ${P(meta)}.`]);
+  }
+  const cx=rG('Caixa no fim do mês',m);
+  if(!fut && cx<0) A.push(['bad','🏦',`Caixa negativo no fim do mês: ${Rk(cx)}.`]);
+  if(m===h) A.push(['info','ℹ️','Mês em andamento: o realizado inclui os valores previstos lançados até o fim do mês.']);
+
+  const sevs={bad:0,warn:1,ok:2,info:3};
+  A.sort((a,b)=>sevs[a[0]]-sevs[b[0]]);
+  if(!A.some(a=>a[0]==='bad'||a[0]==='warn')) A.unshift(['ok','✅','Todas as linhas dentro do orçamento.']);
+  document.getElementById('orcAlerts').innerHTML=A.map(([c,i,t])=>`<div class="alert ${c}"><span class="ai">${i}</span><span>${t}</span></div>`).join('');
+}
+
+function renderBarras(m){
+  let html='';
+  const be=baseReal(m);
+  for(const [lab,ko,kr] of ORC_CATS){
+    const o=oG(ko,m), r=realCat(lab,kr,m); if(!o && !r) continue;
+    const u=o>0?r/o:(r>0?Infinity:0);
+    const cor=lab==='Dívida'?'#94A3B8':(u>1.0001?'var(--re)':(u>.9?'var(--or)':'var(--gr)'));
+    const w=Math.min(100,isFinite(u)?u*100:100);
+    const saldo=o-r;
+    const sub=lab==='Dívida'?'cronograma lançado':(saldo<-1?'estourou '+Rk(-saldo):'sobram '+Rk(saldo));
+    html+=`<div class="ubar-row"><div>${lab}<small style="display:block;color:var(--mu);font-size:.56rem">${be?P(r/be):'—'} do recebimento</small></div>
+      <div class="ubar"><i style="width:${w}%;background:${cor}"></i></div>
+      <div class="ubar-v" style="color:${saldo<-1&&lab!=='Dívida'?'var(--re)':'var(--tx)'}">${isFinite(u)?P(u):'—'}
+        <small>${sub}</small></div></div>`;
+  }
+  document.getElementById('orcBars').innerHTML=html||'<div class="ks">Sem valores para o mês.</div>';
+}
+
+function renderGraficos(proj){
+  if(typeof Chart==='undefined'){ setTimeout(()=>renderGraficos(proj),400); return; }
+  const J=janela(), h=mesHoje();
+  const lbl=J.map(i=>MESNOME[i+1]);
+  const fs={12:11,6:13,3:15}[orcJanela]||11;
+  const yk=v=>{const a=Math.abs(v); return (v<0?'-':'')+(a>=1e6?(a/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi':Math.round(a/1e3)+' mil');};
+  const tt={callbacks:{label:c=>`${c.dataset.label}: ${c.raw==null?'—':R(c.raw)}`}};
+  const pick=(ev,els)=>{ if(els&&els.length){ orcMes=J[els[0].index]; renderORC(); } };
+  const base={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},onClick:pick,
+    plugins:{legend:{labels:{font:{family:'Nunito',weight:'700',size:fs},boxWidth:12}},tooltip:tt},
+    scales:{x:{grid:{display:false},ticks:{font:{family:'Nunito',weight:'700',size:fs}}},
+            y:{ticks:{callback:yk,font:{family:'Nunito',size:fs}},grid:{color:'#EEF2F6'}}}};
+  const cxAll=Array.from({length:12},(_,i)=>i<h?rG('Caixa no fim do mês',i):null);
+  if(h>0) cxAll[h-1]=rG('Caixa no fim do mês',h-1);
+  const sel=i=>i===orcMes;
+
+  Object.values(orcCh).forEach(c=>c.destroy());
+  orcCh.rec=new Chart(document.getElementById('orcChRec'),{
+    data:{labels:lbl,datasets:[
+      {type:'bar',label:'Previsão',data:J.map(i=>oG('Previsão de recebimento',i)),backgroundColor:'#FCE3B8',borderRadius:4,order:2},
+      {type:'bar',label:'Realizado/lançado',data:J.map(i=>rG('Recebimento',i)),backgroundColor:J.map(i=>sel(i)?'#D4881A':'#F5A623'),borderRadius:4,order:2},
+      {type:'line',label:'Caixa fim do mês',data:J.map(i=>cxAll[i]),borderColor:'#1A1F2E',backgroundColor:'#1A1F2E',pointRadius:3,tension:.25,yAxisID:'y1',order:1},
+      {type:'line',label:'Caixa projetado',data:J.map(i=>proj[i]),borderColor:'#7A8799',backgroundColor:'#7A8799',borderDash:[5,4],pointRadius:3,tension:.25,yAxisID:'y1',order:1}
+    ]},
+    options:{...base,scales:{...base.scales,y1:{position:'right',grid:{display:false},ticks:{callback:yk,font:{family:'Nunito',size:fs}}}}}
+  });
+  orcCh.forn=new Chart(document.getElementById('orcChForn'),{
+    data:{labels:lbl,datasets:[
+      {type:'bar',label:'Orçado (premissa)',data:J.map(i=>oG('Fornecedores',i)),backgroundColor:'#CBD5E1',borderRadius:4,order:2,stack:'orc'},
+      {type:'bar',label:'Lançado',data:J.map(i=>rG('Fornecedores',i)),backgroundColor:J.map(i=>saldoForn(i)<-1?'#DC2626':'#16A34A'),order:2,stack:'real'},
+      {type:'bar',label:'Lançado OC',data:J.map(i=>fornOC(i)),backgroundColor:J.map(i=>saldoForn(i)<-1?'#FCA5A5':'#86EFAC'),borderRadius:4,order:2,stack:'real'},
+      {type:'line',label:'Teto p/ meta de sobra',data:J.map(i=>tetoMeta(i)),borderColor:'#D4881A',backgroundColor:'#D4881A',borderDash:[5,4],pointRadius:3,tension:.2,order:1}
+    ]},
+    options:{...base,scales:{...base.scales,x:{...base.scales.x,stacked:true},y:{...base.scales.y,stacked:true}}}
+  });
+}
+
+function renderPremissas(m){
+  const J=janela(), sel=i=>i===m?' col-sel':'';
+  const nomes=Object.keys(ORC.prem);
+  let hd='<thead><tr><th>Premissa</th><th style="text-align:left">Unidade</th>'+J.map(i=>`<th class="${sel(i).trim()}">${MESNOME[i+1]}</th>`).join('')+'<th style="text-align:left">Origem</th></tr></thead><tbody>';
+  for(const k of nomes){
+    const p=ORC.prem[k], calc=k.startsWith('Recebimento mínimo');
+    hd+=`<tr><td>${k}</td><td style="text-align:left;color:var(--mu)">${p.un}</td>`;
+    J.forEach(i=>{
+      const v=p.vals[i]||0;
+      const tx=p.pct?P(v):(orcJanela===3?Rc(v):Math.round(v).toLocaleString('pt-BR'));
+      const diff=k==='Fornecedores' && v!==p.vals[0];
+      hd+=`<td class="${((calc?'':'inp')+(diff?' hi':'')+sel(i)).trim()}">${tx}</td>`;
+    });
+    hd+=`<td class="org">${p.org||''}</td></tr>`;
+  }
+  hd+='</tbody>';
+  document.getElementById('orcPremWrap').innerHTML=`<table>${hd}</table>`;
+}
+
+function renderTabelaORC(m){
+  const J=janela(), h=mesHoje();
+  const cmp=orcJanela===3;
+  const K=v=>cmp?Rc(Math.abs(v)<500?0:v):(Math.round((v||0)/1e3)||0).toLocaleString('pt-BR');
+  const KS=v=>v<-500?'('+K(-v)+')':K(v);
+  const un=cmp?'R$':'R$ mil';
+  document.getElementById('orcTbTit').textContent=cmp?'Orçado x realizado por mês (R$ e % do recebimento)':'Orçado x realizado por mês (R$ mil e % do recebimento)';
+  const sel=i=>i===m?' col-sel':'';
+  const prev=Array.from({length:12},(_,i)=>oG('Previsão de recebimento',i));
+  const bReal=Array.from({length:12},(_,i)=>baseReal(i));
+  const sumJ=a=>J.reduce((s,i)=>s+(a[i]||0),0);
+  const pc=(v,b)=>{ if(!b) return '—'; const r=v/b; return P(Math.abs(r)<0.0005?0:r); };
+
+  let hd='<thead><tr><th rowspan="2">Linha</th>'+J.map(i=>`<th colspan="2" class="mh${sel(i)}">${MESNOME[i+1]}</th>`).join('')+'<th colspan="2" class="mh col-tot">Total</th></tr><tr>';
+  J.forEach(i=>hd+=`<th class="${sel(i).trim()}">${un}</th><th class="pc${sel(i)}">%</th>`);
+  hd+=`<th class="col-tot">${un}</th><th class="pc col-tot">%</th></tr></thead>`;
+
+  // linha genérica: valores, base do % e se o valor é um saldo (colore verde/vermelho)
+  const linha=(lab,arr,bases,saldo)=>{
+    let s=`<tr class="sub"><td>${lab}</td>`;
+    J.forEach(i=>{
+      const v=arr[i]||0, c=saldo?(v<-500?'clow':'cok'):'';
+      s+=`<td class="${(c+sel(i)).trim()}">${saldo?KS(v):K(v)}</td><td class="pc ${c}${sel(i)}">${pc(v,bases[i])}</td>`;
+    });
+    const t=sumJ(arr), bt=sumJ(bases), c=saldo?(t<-500?'clow':'cok'):'';
+    s+=`<td class="col-tot ${c}">${saldo?KS(t):K(t)}</td><td class="pc col-tot ${c}">${pc(t,bt)}</td></tr>`;
+    return s;
+  };
+  const arrO=k=>Array.from({length:12},(_,i)=>oG(k,i));
+  const arrR=k=>Array.from({length:12},(_,i)=>rG(k,i));
+  const dif=(a,b)=>a.map((v,i)=>v-b[i]);
+  const ncol=1+J.length*2+2;
+  const grp=t=>`<tr class="grp"><td colspan="${ncol}">${t}</td></tr>`;
+
+  let b='<tbody>';
+  const rc=arrR('Recebimento');
+  b+=grp('Recebimento');
+  b+=linha('Previsto',prev,prev); b+=linha('Realizado / lançado',rc,prev); b+=linha('Diferença',dif(rc,prev),prev,true);
+
+  for(const [lab,ko,kr] of ORC_CATS){
+    const o=arrO(ko), r=arrR(kr);
+    b+=grp(lab);
+    b+=linha('Orçado',o,prev);
+    b+=linha('Lançado',r,bReal);
+    if(lab==='Fornecedores'){
+      const oc=arrR('Fornecedores OC');
+      b+=linha('Lançado OC',oc,bReal);
+      b+=linha('Saldo',o.map((v,i)=>v-r[i]-oc[i]),prev,true);
+    } else b+=linha('Saldo',dif(o,r),prev,true);
+    if(lab==='Fornecedores') b+=linha('Teto p/ meta de sobra',arrO('Teto de fornecedores para a sobra mínima'),prev);
+  }
+
+  b+=grp('Sobra e caixa');
+  b+=linha('Sobra orçada',arrO('Sobra orçada'),prev,true);
+  const sm=Array.from({length:12},(_,i)=>sobraMes(i));
+  b+=linha('Sobra realizada / projetada',sm,bReal,true);
+  let mt='<tr class="sub"><td>Meta de sobra</td>';
+  J.forEach(i=>mt+=`<td class="${sel(i).trim()}">${K(prev[i]*metaSobra(i))}</td><td class="pc${sel(i)}">${P(metaSobra(i))}</td>`);
+  const tm=J.reduce((s,i)=>s+prev[i]*metaSobra(i),0);
+  mt+=`<td class="col-tot">${K(tm)}</td><td class="pc col-tot">${pc(tm,sumJ(prev))}</td></tr>`;
+  b+=mt;
+
+  const ci=arrR('Caixa no início do mês'), cf=arrR('Caixa no fim do mês'), pj=caixaProj();
+  const cxRow=(lab,arr,show,tot)=>{
+    let s=`<tr class="sub"><td>${lab}</td>`;
+    J.forEach(i=>{ const ok=show(i)&&arr[i]!=null, v=arr[i]||0;
+      s+=`<td class="${((ok?(v<0?'clow':''):'val-z')+sel(i)).trim()}">${ok?KS(v):'—'}</td><td class="pc${sel(i)}"></td>`; });
+    s+=`<td class="col-tot ${tot<0?'clow':''}">${tot==null?'—':KS(tot)}</td><td class="pc col-tot"></td></tr>`;
+    return s;
+  };
+  b+=cxRow('Caixa no início',ci,()=>true,ci[J[0]]);
+  b+=cxRow('Caixa no fim (lançado)',cf,()=>true,cf[J[J.length-1]]);
+  b+=cxRow('Caixa no fim (projetado)',pj,i=>i>=h,pj[J[J.length-1]]);
+  b+='</tbody>';
+  document.getElementById('orcTbWrap').innerHTML=`<table>${hd}${b}</table>`;
+}
+
 // ═══════════════════════ CLOCK ═══════════════════════
 function tick(){ const d=new Date(); document.getElementById('clock').textContent=d.toLocaleTimeString('pt-BR'); }
 setInterval(tick,1000); tick();
 
 // start
+prefetchORC();
 load();
 </script>
 </body>
