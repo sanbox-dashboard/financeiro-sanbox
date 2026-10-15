@@ -939,14 +939,14 @@ function renderTabelaORC(m){
   }
 
   b+=grp('Sobra e caixa');
-  b+=linha('Sobra orçada',arrO('Sobra orçada'),prev,true);
-  const sm=Array.from({length:12},(_,i)=>sobraMes(i));
-  b+=linha('Sobra realizada / projetada',sm,bReal,true);
-  let mt='<tr class="sub"><td>Meta de sobra</td>';
+  let mt='<tr class="sub"><td>Meta de Caixa</td>';
   J.forEach(i=>mt+=`<td class="${sel(i).trim()}">${K(prev[i]*metaSobra(i))}</td><td class="pc${sel(i)}">${P(metaSobra(i))}</td>`);
   const tm=J.reduce((s,i)=>s+prev[i]*metaSobra(i),0);
   mt+=`<td class="col-tot">${K(tm)}</td><td class="pc col-tot">${pc(tm,sumJ(prev))}</td></tr>`;
   b+=mt;
+  b+=linha('Caixa Previsto',arrO('Sobra orçada'),prev,true);
+  const sm=Array.from({length:12},(_,i)=>sobraMes(i));
+  b+=linha('Caixa Realizado',sm,bReal,true);
 
   const ci=arrR('Caixa no início do mês'), cf=arrR('Caixa no fim do mês'), pj=caixaProj();
   const cxRow=(lab,arr,show,tot)=>{
