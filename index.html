@@ -970,6 +970,14 @@ setInterval(tick,1000); tick();
 // start
 prefetchORC();
 load();
+
+// releitura automática do orçamento a cada 1 hora; com a aba do navegador em segundo plano,
+// a releitura fica pendente e acontece assim que a página volta a ficar visível
+const ORC_REFRESH_MS = 60*60*1000;
+let _orcPendente=false;
+function releOrc(){ _orcPromise=null; _orcRaw=null; prefetchORC(); }
+setInterval(()=>{ if(document.hidden) _orcPendente=true; else releOrc(); }, ORC_REFRESH_MS);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && _orcPendente){ _orcPendente=false; releOrc(); } });
 </script>
 </body>
 </html>
