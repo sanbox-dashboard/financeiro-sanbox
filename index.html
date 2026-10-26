@@ -676,9 +676,9 @@ function saldoForn(m){ return oG('Fornecedores',m)-fornTot(m); }
 function tetoMeta(m){ return oG('Teto de fornecedores para a sobra mínima',m); }
 // base do % do lançado: recebido nos meses fechados; previsão no mês atual e nos futuros
 function baseReal(m){ return m<mesHoje()?rG('Recebimento',m):oG('Previsão de recebimento',m); }
-// sobra que vale para o mês: realizada se fechado; projetada se em andamento/futuro
+// sobra que vale para o mês: realizada (lançada) até o mês atual; projetada nos meses futuros
 function sobraMes(m){
-  if(m<mesHoje()) return rG('Sobra de caixa',m);
+  if(m<=mesHoje()) return rG('Sobra de caixa',m);
   return oG('Previsão de recebimento',m)-Math.max(rG('Total de saídas',m),oG('Total de saídas orçado',m));
 }
 
@@ -726,7 +726,7 @@ function renderORC(){
   const prev=oG('Previsão de recebimento',m), rec=rG('Recebimento',m);
   const fo=oG('Fornecedores',m), forn=fornTot(m), oc=fornOC(m), sf=fo-forn, teto=tetoMeta(m);
   const meta=metaSobra(m), fut=m>h, fech=m<h;
-  const sobra=sobraMes(m), base=fech?rec:prev, sobraP=base?sobra/base:0;
+  const real=m<=h, sobra=sobraMes(m), base=real?rec:prev, sobraP=base?sobra/base:0;
   const sOrcP=oG('Sobra orçada (% da previsão)',m);
   const cxFim=rG('Caixa no fim do mês',m), proj=caixaProj();
 
@@ -741,7 +741,7 @@ function renderORC(){
     sf<-1?'var(--re)':'var(--gr)');
   // KPI sobra
   setKpi('kpSobra','kSobraV','kSobraS',(sobra<0?'− ':'')+Rk(Math.abs(sobra)),
-    `${fech?'realizada':'projetada'}: ${P(sobraP)} · orçada ${P(sOrcP)} · meta ${P(meta)}`,
+    `${real?'realizada':'projetada'}: ${P(sobraP)} · orçada ${P(sOrcP)} · meta ${P(meta)}`,
     sobraP>=meta?'var(--gr)':(sobraP>=0?'var(--or)':'var(--re)'));
   // KPI caixa
   const cxShow=m>=h&&proj[m]!=null?proj[m]:cxFim;
@@ -796,9 +796,9 @@ function renderAlertas(m){
   const estr=rG('Estrutura, galpão e outros',m), lim=limEstr(m), be=baseReal(m);
   if(be && estr/be>lim*1.005) A.push(['bad','🏭',`Estrutura e galpão em ${P(estr/be)} do recebimento, acima do limite de ${P(lim)}.`]);
 
-  const sobra=sobraMes(m), bs=fech?rec:prev;
+  const real=m<=h, sobra=sobraMes(m), bs=real?rec:prev;
   if(bs>0){
-    const sp=sobra/bs, tx=fech?'realizada':'projetada';
+    const sp=sobra/bs, tx=real?'realizada':'projetada';
     if(sp<meta) A.push(['bad','💸',`Sobra ${tx} de ${P(sp)} (${Rk(sobra)}), abaixo da meta de ${P(meta)}.`]);
     else A.push(['ok','✅',`Sobra ${tx} de ${P(sp)}, acima da meta de ${P(meta)}.`]);
   }
@@ -946,7 +946,7 @@ function renderTabelaORC(m){
   b+=mt;
   b+=linha('Caixa Previsto',arrO('Sobra orçada'),prev,true);
   const sm=Array.from({length:12},(_,i)=>sobraMes(i));
-  b+=linha('Caixa Realizado',sm,bReal,true);
+  b+=linha('Caixa Realizado',sm,Array.from({length:12},(_,i)=>i<=h?rG('Recebimento',i):prev[i]),true);
 
   const ci=arrR('Caixa no início do mês'), cf=arrR('Caixa no fim do mês'), pj=caixaProj();
   const cxRow=(lab,arr,show,tot)=>{
