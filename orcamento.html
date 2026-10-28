@@ -303,6 +303,22 @@ const SEED = [
   {id:'g_fin',nome:'Custos financeiros',tipo:'despesa',cats:['Emprestimo','Finimpe','Verbas','Outros Custos / Créditos']},
   {id:'g_forn',nome:'Fornecedores (fora do resultado)',tipo:'fora',cats:['Fornecedores']}
 ];
+/* ══════════ ORÇAMENTO SUGERIDO PELO ANALISTA (aplicado só em grupos ainda sem orçamento) ══════════ */
+const ORC_SUG = {versao:'2026-10-28', mes:'10/2026', grupos:{
+  g_ded:{modo:'pct',v:67.7}, g_fre:{modo:'pct',v:9.5}, g_forn:{modo:'pct',v:75},
+  g_pes:{modo:'valor',v:100000}, g_soc:{modo:'valor',v:59000}, g_gal:{modo:'valor',v:75000},
+  g_gat:{modo:'valor',v:18000}, g_mkt:{modo:'valor',v:4000}, g_imp:{modo:'valor',v:11000},
+  g_adm:{modo:'valor',v:33000}, g_aju:{modo:'valor',v:7000}, g_inv:{modo:'pct',v:1.0}, g_fin:{modo:'valor',v:20000}
+}};
+function applySug(){
+  if(CFG.sugAplicada===ORC_SUG.versao) return false;
+  for(const g of CFG.groups){
+    const sg=ORC_SUG.grupos[g.id]; if(!sg) continue;
+    const o=g.orc||{modo:'none'};
+    if(o.modo==='none'||o.modo==null){ g.orc={modo:sg.modo,base:'',meses:{[ORC_SUG.mes]:sg.v},soMeses:true,sug:true}; }
+  }
+  CFG.sugAplicada=ORC_SUG.versao; return true;
+}
 const TIPOS = {receita:'Receita', deducao:'Dedução da venda', despesa:'Despesa', fora:'Fora do resultado'};
 const NONE_G = {id:'_none', nome:'Sem grupo — classificar', tipo:'despesa', orc:{modo:'none',base:0,meses:{}}, virtual:true};
 
@@ -601,14 +617,16 @@ function visibleCats(gid,mks){
 function fatBase(mk){ const v=(STATE.vendas||{})[mk]||{r:0,p:0}; return isPast(mk) ? v.r : Math.max(v.r,v.p); }
 function orcado(g,mk){
   const o=g.orc; if(!o||o.modo==='none'||o.modo==null) return null;
+  if(o.soMeses && (o.meses||{})[mk]===undefined) return null;
   const ov=(o.meses||{})[mk]; const val=(ov!==undefined&&ov!=='')?pnum(ov):pnum(o.base);
   if(o.modo==='pct') return fatBase(mk)*val/100;
   return val;
 }
 function orcInfo(g,mk){ // {valor, rotulo}
   const o=g.orc||{modo:'none'}; if(o.modo==='none') return null;
+  if(o.soMeses && (o.meses||{})[mk]===undefined) return null;
   const ov=(o.meses||{})[mk]; const has=(ov!==undefined&&ov!==''); const val=has?pnum(ov):pnum(o.base);
-  return {v:orcado(g,mk), rot:o.modo==='pct'?fmt1.format(val)+'% do fat.':'R$ fixo', ov:has};
+  return {v:orcado(g,mk), rot:(o.modo==='pct'?fmt1.format(val)+'% do fat.':'R$ fixo')+(o.sug?' · sugerido':''), ov:has};
 }
 const goodUp = tipo => tipo==='receita' ? true : (tipo==='fora' ? null : false);
 
@@ -1183,7 +1201,7 @@ function exportXLSX(){
 
 /* ══════════ INÍCIO ══════════ */
 (async()=>{
-  await loadCfg();
+  await loadCfg(); if(applySug()) await saveCfg();
   CENTS=!!CFG.ui.cents; ST.view=CFG.ui.view||'mes'; ST.metric=CFG.ui.metric||'tot'; ST.sort=CFG.ui.sort||'val'; ST.showEmpty=!!CFG.ui.showEmpty;
   document.getElementById('chkCents').checked=CENTS; document.getElementById('chkEmpty').checked=ST.showEmpty;
   document.getElementById('selSort').value=ST.sort; document.getElementById('selMetric').value=ST.metric;
