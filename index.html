@@ -153,6 +153,7 @@ tr.sub td:first-child{padding-left:20px;color:var(--mu);}
   <div class="tabbar">
     <button class="tab on" onclick="aba('vCR',this)">💰 Contas a Receber</button>
     <button class="tab" onclick="aba('vDRE',this);loadDRE()">📈 DRE</button>
+    <button class="tab" onclick="aba('vORCAM',this);loadORCAM()">📊 Orçamento</button>
     <button class="tab" onclick="aba('vORC',this);loadORC()">🏦 Fluxo de Caixa (Orçamento)</button>
   </div>
 
@@ -237,6 +238,12 @@ tr.sub td:first-child{padding-left:20px;color:var(--mu);}
       <iframe id="dreFrame" title="Planejamento Financeiro 2026 — DRE por Competência"
               style="width:100%;height:calc(100vh - 96px);border:1px solid var(--bd);border-radius:11px;background:#fff"></iframe>
     </div><!-- /vDRE -->
+
+    <!-- ══ ORÇAMENTO (por competência, grupos de orçamento) ══════ -->
+    <div class="panel" id="vORCAM" style="padding-top:10px">
+      <iframe id="orcamFrame" title="Orçamento — grupos de orçamento por competência"
+              style="width:100%;height:calc(100vh - 96px);border:1px solid var(--bd);border-radius:11px;background:#fff"></iframe>
+    </div><!-- /vORCAM -->
 
     <!-- ══ ORÇAMENTO ════════════════════════════════════════════ -->
     <div class="panel" id="vORC">
@@ -344,6 +351,9 @@ const MESNOME = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out',
 // aba DRE: carrega dre.html (estrutura completa) no iframe, uma única vez
 let _dreLoaded=false;
 function loadDRE(){ if(_dreLoaded) return; _dreLoaded=true; document.getElementById('dreFrame').src='dre.html'; }
+// aba Orçamento: carrega orcamento.html (grupos de orçamento, comparativo mês a mês) no iframe, uma única vez
+let _orcamLoaded=false;
+function loadORCAM(){ if(_orcamLoaded) return; _orcamLoaded=true; document.getElementById('orcamFrame').src='orcamento.html'; }
 
 // ═══════════════════════ HELPERS ═══════════════════════
 // Número em qualquer formato: BR "1.234,56" ou US "1,234.56"/"905.97" -> float
