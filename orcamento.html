@@ -255,7 +255,12 @@
   .tri .tag{margin-left:5px;}
   .tri th.ms,.tri td.ms{border-left:2px solid var(--line2);}
   .tri thead th.mh2{text-align:center; font-size:12px; color:var(--ink); background:#F7F9FC; letter-spacing:.06em;}
-  .tri thead tr.sub2 th{top:30px;}
+  .tri thead tr:first-child th{height:30px;}
+  .tri thead tr.vrow th{top:30px; height:32px; background:#FFF8E8; text-transform:none; letter-spacing:0; font-size:12.5px; font-weight:600; color:var(--mut); text-align:center; white-space:nowrap;}
+  .tri thead tr.vrow th b{color:var(--ink); font-weight:900; font-variant-numeric:tabular-nums;}
+  .tri thead tr.vrow .vsep{margin:0 7px; color:var(--line2);} .tri thead tr.vrow .vl{font-size:11px;}
+  .tri thead tr.vrow b.vpc.g{color:var(--good);} .tri thead tr.vrow b.vpc.r{color:var(--od);}
+  .tri thead tr.sub2 th{top:62px;}
   .tri .num .sub{margin-top:1px;}
   .filters .f select.sel.tsel{min-width:112px;}
   @media (max-width:980px){ .grid2{grid-template-columns:1fr;} }
@@ -634,7 +639,7 @@ async function liveUpdate(trigger){
     for(const mk of meses){
       const yy=mk.slice(3);
       const isFuturo=(yy>CUR.slice(3))||(yy===CUR.slice(3)&&mk>=CUR);
-      vendas[mk]={ r:r2(vend[mk]||0), p: isFuturo&&yy==='2026' ? (metaFinal[mk]??ultimaMeta) : (isFuturo?(metaFinal[mk]??0):0) };
+      vendas[mk]={ r:r2(vend[mk]||0), m:r2(metaFinal[mk]||0), p: isFuturo&&yy==='2026' ? (metaFinal[mk]??ultimaMeta) : (isFuturo?(metaFinal[mk]??0):0) };
     }
 
     // proteção: planilha no meio da sincronização do TinyERP → mantém os dados anteriores e tenta de novo
@@ -735,8 +740,9 @@ function visibleCats(gid,mks){
 }
 /* faturamento de referência p/ orçamento em %: realizado nos meses fechados; meta (ou realizado, se maior) no mês atual e futuros */
 const fatR = mk => ((STATE.vendas||{})[mk]||{}).r||0;
-const fatP = mk => ((STATE.vendas||{})[mk]||{}).p||0;
-const pcs = (v,den) => (den>0&&Math.abs(v)>0.005) ? `<span class="sub pcs" title="% sobre o faturamento (realizado ou previsto do mês)">${Math.abs(v/den)<.001?fmt2.format(v/den*100)+'%':pc1(v/den)}</span>` : '';
+const metaV = mk => { const v=(STATE.vendas||{})[mk]||{}; return (v.p>0?v.p:(v.m||0)); }; // meta de vendas do mês (previsto)
+const fatP = mk => metaV(mk) || fatR(mk); // denominador do % do previsto: meta; sem meta, usa o realizado
+const pcs = (v,den) => (den>0&&Math.abs(v)>0.005) ? `<span class="sub pcs" title="% sobre o faturamento: realizado ÷ vendas realizadas · previsto ÷ meta de vendas do mês (sem meta, usa o realizado)">${Math.abs(v/den)<.001?fmt2.format(v/den*100)+'%':pc1(v/den)}</span>` : '';
 const obsOf = (g,mk) => (g&&g.orc&&g.orc.obs&&g.orc.obs[mk])||'';
 const fmtIn = v => String(Math.round(v*100)/100).replace('.',',');
 function fatBase(mk){ const v=(STATE.vendas||{})[mk]||{r:0,p:0}; return isPast(mk) ? v.r : Math.max(v.r,v.p); }
@@ -1050,8 +1056,10 @@ function fillTri(){
 function renderTri(){
   const months=[...triMonths()].sort((a,b)=>mkOrd(a).localeCompare(mkOrd(b)));
   const gs=orderedGroups(); const W=5;
-  let h=`<table class="tri"><thead><tr><th class="catcol" rowspan="2">Orçado × realizado · ${months.map(mLabel).join(' · ')}</th>`;
+  let h=`<table class="tri"><thead><tr><th class="catcol" rowspan="3">Orçado × realizado · ${months.map(mLabel).join(' · ')}</th>`;
   for(const mk of months) h+=`<th colspan="${W}" class="mh2 ms" data-focus="${mk}" style="cursor:pointer" title="Abrir ${mLong(mk)} detalhado">${mLong(mk)}${isPast(mk)?'':' <span style="font-weight:600;color:var(--mut)">(em andamento)</span>'}</th>`;
+  h+=`</tr><tr class="vrow">`;
+  for(const mk of months){ const mv=metaV(mk); h+=`<th colspan="${W}" class="ms vcell"><span class="vl">Vendas realizadas</span> <b>R$ ${nf(fatR(mk))}</b><span class="vsep">·</span><span class="vl">previstas</span> <b>${mv?'R$ '+nf(mv):'—'}</b>${mv&&fatR(mk)?`<span class="vsep">·</span><b class="vpc ${fatR(mk)>=mv?'g':'r'}">${pc1(fatR(mk)/mv)}</b>`:''}</th>`; }
   h+=`</tr><tr class="sub2">`;
   for(const mk of months) h+=`<th class="ms">Orçado</th><th>Realizado</th><th class="prev">Previsto</th><th>Total</th><th>% orç.</th>`;
   h+=`</tr></thead><tbody>`;
@@ -1249,7 +1257,6 @@ function renderAlerts(){
   if((STATE.invalidComp||[]).length) notes.push(`${STATE.invalidComp.length} lançamento(s) com competência inválida (ex.: ${STATE.invalidComp.slice(0,3).map(x=>`${x.comp} — ${x.nome||x.cat} R$ ${fmt2.format(x.valor)}, id ${x.id}`).join('; ')}) ficaram fora. Corrija a competência no Tiny.`);
   const mvN=Object.keys(CFG.lineMoves||{}).length+(CFG.contactRules||[]).length;
   if(mvN) notes.push(`${mvN} reclassificação(ões) de lançamentos aplicada(s) (veja em “Grupos e orçamentos”).`);
-  if(notes.length) h+=`<div class="alert info">${notes.map(E).join('<br>')}</div>`;
   box.innerHTML=h;
   box.querySelectorAll('[data-assign]').forEach(sel=>sel.addEventListener('change',()=>{ if(!sel.value) return; CFG.catGroup[sel.dataset.assign]=sel.value; saveCfg(); render(); }));
 }
