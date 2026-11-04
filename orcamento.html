@@ -242,6 +242,15 @@
   .evm{font-size:12px; font-weight:800; margin-top:6px;} .evr{font-size:11.5px; font-weight:800; font-variant-numeric:tabular-nums;}
   .evr.g{color:var(--good);} .evr.r{color:var(--bad);} .evs{font-size:10.5px; color:var(--mut);}
   .empty2{color:var(--mut); font-size:13px; padding:14px 2px;}
+  .tri td,.tri th{padding:5px 5px; font-size:12.5px;}
+  .tri th.catcol,.tri td.catcol{min-width:210px; max-width:250px;}
+  .tri thead th{font-size:10px; letter-spacing:.06em;}
+  .tri .tag{margin-left:5px;}
+  .tri th.ms,.tri td.ms{border-left:2px solid var(--line2);}
+  .tri thead th.mh2{text-align:center; font-size:12px; color:var(--ink); background:#F7F9FC; letter-spacing:.06em;}
+  .tri thead tr.sub2 th{top:30px;}
+  .tri .num .sub{margin-top:1px;}
+  .filters .f select.sel.tsel{min-width:112px;}
   @media (max-width:980px){ .grid2{grid-template-columns:1fr;} }
   @media (max-width:760px){ .shell{padding:10px 10px 30px;} .brow{grid-template-columns:1fr auto;} .brow .btrack{grid-column:1/-1; order:3;} .titlebar h1{font-size:22px;} .pills{margin-left:0;} }
 </style>
@@ -251,7 +260,7 @@
 <div class="topbar">
   <div class="brand"><em><b>SAN</b>BOX</em><span>Financeiro</span></div>
   <nav class="pills">
-    <button id="tabGeral">Visão geral</button><button id="tabMes">Mês detalhado</button><button id="tabComp">Comparativo mês a mês</button>
+    <button id="tabGeral">Visão geral</button><button id="tabMes">Mês detalhado</button><button id="tabTri">3 meses lado a lado</button><button id="tabComp">Comparativo mês a mês</button>
   </nav>
   <span class="spacer"></span>
   <button class="tb" id="btnCfg">Grupos e orçamentos</button>
@@ -262,6 +271,7 @@
 <div class="filters">
   <div class="f">Ano <select class="sel" id="selYear"></select></div>
   <div class="f" id="ctlFocus">Mês <button class="ghost" id="btnPrev" title="Mês anterior">‹</button><select class="sel" id="selFocus"></select><button class="ghost" id="btnNext" title="Próximo mês">›</button></div>
+  <div class="f" id="ctlTri" style="display:none">Meses <select class="sel tsel" id="selT0"></select><select class="sel tsel" id="selT1"></select><select class="sel tsel" id="selT2"></select><button class="ghost" id="btnTriReset" title="Mês atual + 2 anteriores" style="font-size:12px;font-weight:800">↺ atual + 2 anteriores</button></div>
   <div class="f" id="ctlMes">Lançamentos por <select class="sel" id="selSort"><option value="val">maior valor</option><option value="venc">vencimento</option><option value="nome">contato</option></select></div>
   <div class="f" id="ctlComp" style="display:none">Exibir <select class="sel" id="selMetric">
       <option value="tot">Total do mês (realizado + previsto)</option><option value="r">Só realizado</option><option value="p">Só previsto</option>
@@ -270,7 +280,7 @@
   <label class="chk" id="lblEmpty"><input type="checkbox" id="chkEmpty"> categorias sem movimento</label>
 </div>
 <div id="alerts"></div>
-<div class="sec">Resultado do mês</div>
+<div class="sec" id="secKpi">Resultado do mês</div>
 <div class="kpis" id="kpis"></div>
 <div id="geral"></div>
 <div class="sec" id="secVendas">Vendas <span class="hint">clique no mês para abrir o orçamento dele · ▶ abre os canais · previsto = meta</span></div>
@@ -998,6 +1008,83 @@ function renderComp(){
 }
 
 
+
+/* ══════════ VISÃO: 3 MESES LADO A LADO ══════════ */
+function triMonths(){
+  const ms=STATE.meses; const ok=m=>ms.includes(m);
+  let t=Array.isArray(ST.tri)?ST.tri.filter(ok):[];
+  if(t.length!==3){
+    const anchor=ok(CUR)?CUR:ms[ms.length-1]; const a=[prevMk(prevMk(anchor)),prevMk(anchor),anchor].filter(ok);
+    t=a.length===3?a:ms.slice(-3);
+  }
+  ST.tri=t; return t;
+}
+function fillTri(){
+  const t=triMonths(); const opts=STATE.meses.map(m=>[m,mLong(m)]);
+  t.forEach((m,i)=>{ const el=document.getElementById('selT'+i); el.innerHTML=opts.map(([v,l])=>`<option value="${v}"${v===m?' selected':''}>${l}</option>`).join(''); });
+}
+function renderTri(){
+  const months=[...triMonths()].sort((a,b)=>mkOrd(a).localeCompare(mkOrd(b)));
+  const gs=orderedGroups(); const W=5;
+  let h=`<table class="tri"><thead><tr><th class="catcol" rowspan="2">Orçado × realizado · ${months.map(mLabel).join(' · ')}</th>`;
+  for(const mk of months) h+=`<th colspan="${W}" class="mh2 ms" data-focus="${mk}" style="cursor:pointer" title="Abrir ${mLong(mk)} detalhado">${mLong(mk)}${isPast(mk)?'':' <span style="font-weight:600;color:var(--mut)">(em andamento)</span>'}</th>`;
+  h+=`</tr><tr class="sub2">`;
+  for(const mk of months) h+=`<th class="ms">Orçado</th><th>Realizado</th><th class="prev">Previsto</th><th>Total</th><th>% orç.</th>`;
+  h+=`</tr></thead><tbody>`;
+  const chipT=(i,v,up,get)=>{ if(!i) return ''; const pv=get(months[i-1]); return `<span class="sub">${chip(v,pv,up)}</span>`; };
+  for(const g of gs){
+    const up=goodUp(g.tipo); const collapsed=!!CFG.ui.collapsed[g.id];
+    const tagOrc = g.virtual ? '' : `<span class="tag orc" data-gedit="${g.id}" title="Editar orçamento do grupo">${(g.orc&&g.orc.modo!=='none')?(g.orc.modo==='pct'?'% do fat.':'R$ fixo'):'definir orçamento'}</span>`;
+    h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}</td>`;
+    months.forEach((mk,i)=>{
+      const a=aggG(g.id,mk); const o=g.virtual?null:orcado(g,mk); const cons=o?a.t/o:null; const over=o!=null&&a.t>o+0.5;
+      h+=`<td class="num clk ms" data-gedit="${g.virtual?'':g.id}" data-gmk="${mk}">${o!=null?nf(o):''}</td><td class="num">${mny(a.r)}</td><td class="num prev">${mny(a.p)}</td>
+        <td class="num clk ${over?'neg':''}" data-open="g:${g.id}" data-mk="${mk}"><b>${mny(a.t,'0')}</b>${chipT(i,a.t,up,m=>aggG(g.id,m).t)}</td>
+        <td class="num ${over?'oc-over':''}">${cons!=null?pc1(cons)+`<div class="bar ${over?'over':cons>.9?'warn':''}"><i style="width:${Math.min(100,Math.round(cons*100))}%"></i></div>`:''}</td>`;
+    });
+    h+=`</tr>`;
+    if(collapsed) continue;
+    for(const cat of visibleCats(g.id,months)){
+      const vc=VC[cat]; const open=ST.openCats.has(cat);
+      h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true"><td class="catcol"><span class="arrow">▶</span>${E(cat)}${vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
+      months.forEach((mk,i)=>{
+        const v=catVal(cat,mk), t=tot(v); const b=fatBase(mk);
+        h+=`<td class="ms"></td><td class="num">${mny(v.r)}</td><td class="num prev">${mny(v.p)}</td>
+          <td class="num ${vc&&vc.auto?'':'clk'}"${vc?'':` data-open="c:${E(cat)}" data-mk="${mk}"`}><b>${mny(t,'0')}</b>${t||tot(catVal(cat,months[i-1]||mk))?chipT(i,t,up,m=>tot(catVal(cat,m))):''}</td>
+          <td class="num mut" title="% sobre o faturamento">${b&&t?pc1(t/b):''}</td>`;
+      });
+      h+=`</tr>`;
+      if(open){
+        if(vc){ h+=`<tr class="con"><td class="catcol">${vc.auto?'Calculado automaticamente (itens vendidos × custo médio).':'Linha editável — digite os valores na visão “Mês detalhado”.'}</td><td colspan="${months.length*W}"></td></tr>`; continue; }
+        const cons=Object.keys(M.con[cat]||{}).map(n=>({n,t:months.reduce((s,mk)=>{const x=((M.con[cat][n])||{})[mk]; return s+(x?Math.abs(x.r+x.p):0);},0)})).filter(x=>x.t>0).sort((a,b)=>b.t-a.t);
+        if(!cons.length) h+=`<tr class="con"><td class="catcol">— sem lançamentos nestes meses</td><td colspan="${months.length*W}"></td></tr>`;
+        for(const {n} of cons){
+          h+=`<tr class="con"><td class="catcol" title="${E(n)}">${E(short(n,48))}</td>`;
+          months.forEach((mk,i)=>{
+            const x=(M.con[cat][n]||{})[mk]; const t=x?x.r+x.p:0; const pv=i?(M.con[cat][n]||{})[months[i-1]]:null; const pt=pv?pv.r+pv.p:0;
+            h+=`<td class="ms"></td><td class="num">${x?mny(x.r):''}</td><td class="num prev">${x?mny(x.p):''}</td><td class="num${x?' clk':''}"${x?` data-open="n:${E(cat)}\u0001${E(n)}" data-mk="${mk}"`:''}>${x?mny(t,'0'):''}${x&&i&&(pv||t)?`<span class="sub">${chip(t,pt,up)}</span>`:''}${x&&x.n>1?`<span class="sub" style="color:var(--mut)">${x.n} lanç.</span>`:''}</td><td></td>`;
+          });
+          h+=`</tr>`;
+        }
+      }
+    }
+  }
+  /* resumo por mês */
+  const R=months.map(mk=>resumoMes(mk));
+  h+=`<tr class="sumhead"><td class="catcol">Resultado por mês</td><td colspan="${months.length*W}"></td></tr>`;
+  const rows=[['Faturamento (base)',r=>r.v.r,r=>r.base,true,''],['(+) Receitas complementares',r=>r.acc.receita.r,r=>r.acc.receita.t,true,''],['(−) Deduções da venda',r=>r.acc.deducao.r,r=>r.acc.deducao.t,false,''],
+    ['(−) Custo dos produtos a incorrer (estimativa)',r=>null,r=>r.aj,false,'aj'],['= Margem',r=>r.margem.r,r=>r.margem.t,true,'big'],['(−) Despesas',r=>r.acc.despesa.r,r=>r.acc.despesa.t,false,''],['= Resultado (projetado)',r=>r.res.r,r=>r.res.t,true,'res']];
+  for(const [lab,fr,ft,up,cls] of rows){
+    if(cls==='aj' && !R.some(r=>r.aj>0)) continue;
+    h+=`<tr class="sum ${cls==='res'||cls==='big'?cls:''}"><td class="catcol">${lab}</td>`;
+    R.forEach((r,i)=>{ const t=ft(r), rr=fr(r); const base=r.base;
+      h+=`<td class="ms"></td><td class="num">${rr==null?'':mny(rr,'0')}</td><td></td><td class="num">${mny(t,'0')}${i?`<span class="sub">${chip(t,ft(R[i-1]),up)}</span>`:''}</td><td class="num" style="opacity:.8">${base&&!lab.startsWith('Fat')?pc1(t/base):''}</td>`; });
+    h+=`</tr>`;
+  }
+  h+=`</tbody></table>`;
+  return h;
+}
+
 /* ══════════ VISÃO GERAL (layout estilo Sanbox Logística) ══════════ */
 const kM = v => { const a=Math.abs(v); const sg=v<0?'−':''; return sg+(a>=1e6?fmt1.format(a/1e6)+' mi':a>=1e4?fmt0.format(a/1e3)+' mil':a>=1e3?fmt1.format(a/1e3)+' mil':fmt0.format(a)); };
 const PAL_DED=['#B7690A','#D4881A','#F5A623','#FFC85A','#F7D99A'];
@@ -1097,12 +1184,12 @@ function render(){
   const app=document.getElementById('app');
   const V=ST.view;
   if(V==='geral') renderGeral(); else document.getElementById('geral').innerHTML='';
-  if(V!=='geral') keepScroll(app,()=>{ app.innerHTML = V==='mes' ? renderMes() : renderComp(); });
-  for(const [id,v] of [['tabGeral','geral'],['tabMes','mes'],['tabComp','comp']]) document.getElementById(id).classList.toggle('on',V===v);
+  if(V!=='geral') keepScroll(app,()=>{ app.innerHTML = V==='mes' ? renderMes() : (V==='tri' ? renderTri() : renderComp()); });
+  for(const [id,v] of [['tabGeral','geral'],['tabMes','mes'],['tabTri','tri'],['tabComp','comp']]) document.getElementById(id).classList.toggle('on',V===v);
   const dsp=(id,on,d='flex')=>document.getElementById(id).style.display=on?d:'none';
-  dsp('ctlMes',V==='mes'); dsp('ctlComp',V==='comp'); dsp('ctlFocus',V!=='comp'); dsp('lblEmpty',V!=='geral','inline-flex');
-  dsp('app',V!=='geral','block'); dsp('secDet',V!=='geral'); dsp('secVendas',true);
-  document.getElementById('detHint').textContent = V==='mes' ? 'clique numa categoria para abrir os lançamentos · arraste para outro grupo ou use ↪' : 'variação de cada mês contra o anterior';
+  dsp('ctlMes',V==='mes'); dsp('ctlComp',V==='comp'); dsp('ctlFocus',V==='geral'||V==='mes'); dsp('ctlTri',V==='tri'); dsp('kpis',V!=='tri','grid'); dsp('secKpi',V!=='tri'); if(V==='tri') fillTri(); dsp('lblEmpty',V!=='geral','inline-flex');
+  dsp('app',V!=='geral','block'); dsp('secDet',V!=='geral'); dsp('secVendas',V!=='tri'); dsp('vendasCard',V!=='tri','block');
+  document.getElementById('detHint').textContent = V==='mes' ? 'clique numa categoria para abrir os lançamentos · arraste para outro grupo ou use ↪' : (V==='tri' ? 'o ▲▼ compara cada mês com a coluna à esquerda · clique numa categoria para ver os contatos, num valor para ver os lançamentos' : 'variação de cada mês contra o anterior');
   fillFocus();
   if(DR) renderDrawer();
 }
@@ -1333,6 +1420,9 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getEl
 document.addEventListener('click',e=>{ if(!e.target.closest('#menu')&&!e.target.closest('[data-mvcat]')) document.getElementById('menu').classList.remove('on'); });
 
 document.getElementById('tabGeral').onclick=()=>{ ST.view='geral'; CFG.ui.view='geral'; render(); };
+document.getElementById('tabTri').onclick=()=>{ ST.view='tri'; CFG.ui.view='tri'; render(); };
+for(let i=0;i<3;i++) document.getElementById('selT'+i).onchange=e=>{ const t=triMonths().slice(); const old=t[i]; const nv=e.target.value; const j=t.indexOf(nv); if(j>=0&&j!==i) t[j]=old; t[i]=nv; ST.tri=t; CFG.ui.tri=t; saveCfg(); render(); };
+document.getElementById('btnTriReset').onclick=()=>{ ST.tri=null; CFG.ui.tri=null; saveCfg(); render(); };
 document.getElementById('tabMes').onclick=()=>{ ST.view='mes'; CFG.ui.view='mes'; render(); };
 document.getElementById('tabComp').onclick=()=>{ ST.view='comp'; CFG.ui.view='comp'; render(); };
 document.getElementById('selYear').onchange=e=>{ ST.year=e.target.value; render(); };
@@ -1385,7 +1475,7 @@ function exportXLSX(){
 /* ══════════ INÍCIO ══════════ */
 (async()=>{
   await loadCfg(); if(applySug()) await saveCfg();
-  CENTS=!!CFG.ui.cents; ST.view=CFG.ui.view||'geral'; ST.metric=CFG.ui.metric||'tot'; ST.sort=CFG.ui.sort||'val'; ST.showEmpty=!!CFG.ui.showEmpty;
+  CENTS=!!CFG.ui.cents; ST.view=CFG.ui.view||'geral'; ST.tri=CFG.ui.tri||null; ST.metric=CFG.ui.metric||'tot'; ST.sort=CFG.ui.sort||'val'; ST.showEmpty=!!CFG.ui.showEmpty;
   document.getElementById('chkCents').checked=CENTS; document.getElementById('chkEmpty').checked=ST.showEmpty;
   document.getElementById('selSort').value=ST.sort; document.getElementById('selMetric').value=ST.metric;
   fixSelections();
