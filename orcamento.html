@@ -242,6 +242,13 @@
   .evm{font-size:12px; font-weight:800; margin-top:6px;} .evr{font-size:11.5px; font-weight:800; font-variant-numeric:tabular-nums;}
   .evr.g{color:var(--good);} .evr.r{color:var(--bad);} .evs{font-size:10.5px; color:var(--mut);}
   .empty2{color:var(--mut); font-size:13px; padding:14px 2px;}
+  .sub.pcs{color:var(--mut); font-size:10.5px; font-weight:600; line-height:1.2;}
+  .gobs{font-size:11px; font-weight:600; color:var(--od); font-style:italic; margin-top:2px; white-space:normal; line-height:1.25; text-transform:none;}
+  input.cell.pv{width:78px; padding:2px 4px; font-size:12px;}
+  input.cell.pv.ed{background:#FFF1CC; border:1px solid var(--or);}
+  td.edt{background:#FFF8E1;}
+  .tri td.num{vertical-align:middle;} .tri td .sub{line-height:1.25;}
+  button.addprev{font-size:12px; color:var(--od); border-color:transparent; background:transparent; padding:2px 6px;} button.addprev:hover{border-color:var(--or);}
   .tri td,.tri th{padding:5px 5px; font-size:12.5px;}
   .tri th.catcol,.tri td.catcol{min-width:210px; max-width:250px;}
   .tri thead th{font-size:10px; letter-spacing:.06em;}
@@ -440,7 +447,7 @@ async function stSet(k,v){
 function seedCfg(){
   const groups=SEED.map(s=>({id:s.id,nome:s.nome,tipo:s.tipo,orc:{modo:'none',base:0,meses:{}}}));
   const catGroup={}; SEED.forEach(s=>s.cats.forEach(c=>{catGroup[c]=s.id;}));
-  return {v:1,groups,catGroup,lineMoves:{},contactRules:[],manual:{},ui:{cents:false,view:'geral',metric:'tot',sort:'val',showEmpty:false,collapsed:{}}};
+  return {v:1,groups,catGroup,lineMoves:{},contactRules:[],manual:{},conPrev:{},ui:{cents:false,view:'geral',metric:'tot',sort:'val',showEmpty:false,collapsed:{}}};
 }
 let CFG=seedCfg();
 const saveCfg = () => stSet('orc_cfg', CFG);
@@ -684,6 +691,17 @@ function buildModel(){
     const nm=(M.con[ecat]=M.con[ecat]||{}); const ncm=(nm[it.nome]=nm[it.nome]||{}); const cc=(ncm[ecomp]=ncm[ecomp]||{r:0,p:0,n:0}); cc.r+=it.r; cc.p+=it.p; cc.n++;
     const k=ecat+'\u0001'+ecomp; (M.lines[k]=M.lines[k]||[]).push(it);
   }
+  /* ajustes manuais de previsão por contato (CFG.conPrev[cat\u0001contato][mês] = {v, r0}); ignora se já houve pagamento depois do ajuste */
+  for(const key of Object.keys(CFG.conPrev||{})){
+    const [cat,nome]=key.split('\u0001'); if(!cat||nome==null||VC[cat]) continue;
+    for(const mk of Object.keys(CFG.conPrev[key]||{})){
+      const ov=CFG.conPrev[key][mk]; if(!ov) continue;
+      const nm=(M.con[cat]=M.con[cat]||{}); const ncm=(nm[nome]=nm[nome]||{}); const cc=(ncm[mk]=ncm[mk]||{r:0,p:0,n:0});
+      if(cc.r>(ov.r0||0)+0.5) continue;
+      const nv=pnum(ov.v); const d=nv-cc.p; cc.po=cc.p; cc.p=nv; cc.ed=true;
+      const cm=(M.cat[cat]=M.cat[cat]||{}); const c=(cm[mk]=cm[mk]||{r:0,p:0,n:0}); c.p+=d; c.pd=(c.pd||0)+d; M.catsData.add(cat);
+    }
+  }
 }
 function catVal(cat,mk){
   const v=VC[cat];
@@ -705,7 +723,7 @@ function catHasData(cat, mks){
   if(VC[cat]) return true;
   const cm=M.cat[cat]; if(!cm) return false;
   if(!mks) return Object.keys(cm).length>0;
-  return mks.some(mk=>cm[mk] && (cm[mk].n>0));
+  return mks.some(mk=>cm[mk] && (cm[mk].n>0 || Math.abs(cm[mk].r)+Math.abs(cm[mk].p)>0.005));
 }
 function aggG(gid,mk){
   let r=0,p=0; for(const c of BUCKET[gid]||[]){ const v=catVal(c,mk); r+=v.r; p+=v.p; } return {r,p,t:r+p};
@@ -716,6 +734,11 @@ function visibleCats(gid,mks){
   return l.sort((a,b)=>key(b)-key(a)||a.localeCompare(b,'pt-BR'));
 }
 /* faturamento de referência p/ orçamento em %: realizado nos meses fechados; meta (ou realizado, se maior) no mês atual e futuros */
+const fatR = mk => ((STATE.vendas||{})[mk]||{}).r||0;
+const fatP = mk => ((STATE.vendas||{})[mk]||{}).p||0;
+const pcs = (v,den) => (den>0&&Math.abs(v)>0.005) ? `<span class="sub pcs" title="% sobre o faturamento (realizado ou previsto do mês)">${Math.abs(v/den)<.001?fmt2.format(v/den*100)+'%':pc1(v/den)}</span>` : '';
+const obsOf = (g,mk) => (g&&g.orc&&g.orc.obs&&g.orc.obs[mk])||'';
+const fmtIn = v => String(Math.round(v*100)/100).replace('.',',');
 function fatBase(mk){ const v=(STATE.vendas||{})[mk]||{r:0,p:0}; return isPast(mk) ? v.r : Math.max(v.r,v.p); }
 function orcado(g,mk){
   const o=g.orc; if(!o||o.modo==='none'||o.modo==null) return null;
@@ -876,8 +899,8 @@ function renderMes(){
     const collapsed=!!CFG.ui.collapsed[g.id];
     const consumo=o?a.t/o:null; const over=o!=null&&a.t>o+0.5;
     const tagOrc = g.virtual ? '' : `<span class="tag orc" data-gedit="${g.id}" title="Editar orçamento do grupo">${oi?E(oi.rot)+(oi.ov?' · ajustado neste mês':''):'definir orçamento'}</span>`;
-    h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}</td>
-      <td class="num clk" data-gedit="${g.virtual?'':g.id}">${o!=null?nf(o):''}</td><td class="num">${mny(a.r)}</td><td class="num prev">${mny(a.p)}</td><td class="num"><b>${mny(a.t,'0')}</b></td>
+    h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}${obsOf(g,mk)?`<div class="gobs">📝 ${E(obsOf(g,mk))}</div>`:''}</td>
+      <td class="num clk" data-gedit="${g.virtual?'':g.id}">${o!=null?nf(o):''}</td><td class="num">${mny(a.r)}${pcs(a.r,fatR(mk))}</td><td class="num prev">${mny(a.p)}${pcs(a.p,fatP(mk))}</td><td class="num"><b>${mny(a.t,'0')}</b></td>
       <td class="num">${base?pc1(a.t/base):'—'}</td>
       <td class="num ${over?'oc-over':''}">${consumo!=null?pc1(consumo)+`<div class="bar ${over?'over':consumo>.9?'warn':''}"><i style="width:${Math.min(100,Math.round(consumo*100))}%"></i></div>`:''}</td>
       <td class="num ${over?'oc-over':(o!=null?'oc-ok':'')}">${o!=null?(o-a.t>0?'+':'')+nf(o-a.t):''}</td>
@@ -891,13 +914,14 @@ function renderMes(){
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true">
         <td class="catcol">${vc&&vc.manual?'':`<span class="arrow">▶</span>`}${E(cat)}${tags}${nLines?`<span class="tag">${nLines} lanç.</span>`:''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
       if(vc&&vc.manual){ h+=manualInputs(cat,mk)+`<td class="num"><b>${mny(t,'0')}</b></td><td class="num mut">${base&&t?pc1(t/base):''}</td><td></td><td></td><td class="num mut">${mny(pt)}</td>${dcell(t,pt,up,mk)}</tr>`; continue; }
-      h+=`<td></td><td class="num">${mny(v.r)}</td><td class="num prev">${mny(v.p)}</td><td class="num"><b>${mny(t,'0')}</b></td><td class="num mut">${base&&t?pc1(t/base):''}</td><td></td><td></td><td class="num mut">${mny(pt)}</td>${dcell(t,pt,up,mk)}</tr>`;
+      h+=`<td></td><td class="num">${mny(v.r)}${pcs(v.r,fatR(mk))}</td><td class="num prev${v.pd?' edt':''}"${v.pd?` title="inclui ajuste manual de previsão: ${v.pd>0?'+':''}${fmt2.format(v.pd)}"`:''}>${mny(v.p)}${pcs(v.p,fatP(mk))}</td><td class="num"><b>${mny(t,'0')}</b></td><td class="num mut">${base&&t?pc1(t/base):''}</td><td></td><td></td><td class="num mut">${mny(pt)}</td>${dcell(t,pt,up,mk)}</tr>`;
       if(open){
         if(vc&&vc.auto) h+=`<tr class="con"><td class="catcol">Calculado automaticamente: itens dos pedidos válidos do mês × custo médio do produto (sem lançamentos individuais).</td><td colspan="10"></td></tr>`;
         else {
           const lines=((M.lines[cat+'\u0001'+mk])||[]).slice().sort(lineSorter(ST.sort));
           if(!lines.length) h+=`<tr class="con"><td class="catcol">— sem lançamentos nesta competência</td><td colspan="10"></td></tr>`;
           for(const l of lines) h+=lineRowMes(l,pk,base,up,hp);
+          if(Math.abs(v.pd||0)>0.005) h+=`<tr class="con"><td class="catcol">✎ ajustes manuais de previsão <span style="color:var(--mut)">(feitos na visão “3 meses lado a lado”)</span></td><td></td><td></td><td class="num prev">${v.pd>0?'+':''}${mny2(v.pd)}</td><td class="num">${v.pd>0?'+':''}${mny2(v.pd)}</td><td colspan="6"></td></tr>`;
         }
       }
     }
@@ -961,7 +985,7 @@ function renderComp(){
     h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}</td>${cellsFor(g,null,up,'g:'+g.id)}</tr>`;
     if(!collapsed && !g.virtual && g.orc && g.orc.modo!=='none' && (kind==='tot'||kind==='r'||kind==='p')){
       let s='',so=0;
-      for(const mk of months){ const o=orcado(g,mk); so+=o||0; s+=`<td class="num clk${mk===ST.focus?' focus':''}" data-gedit="${g.id}" data-gmk="${mk}">${o!=null?mny(o):''}</td>`; }
+      for(const mk of months){ const o=orcado(g,mk); so+=o||0; s+=`<td class="num clk${mk===ST.focus?' focus':''}" data-gedit="${g.id}" data-gmk="${mk}"${obsOf(g,mk)?` title="${E(obsOf(g,mk))}"`:''}>${o!=null?mny(o):''}${obsOf(g,mk)?' 📝':''}</td>`; }
       h+=`<tr class="orcrow"><td class="catcol">orçado do grupo</td>${s}<td class="num">${mny(so,'0')}</td><td></td></tr>`;
     }
     if(collapsed) continue;
@@ -1035,10 +1059,10 @@ function renderTri(){
   for(const g of gs){
     const up=goodUp(g.tipo); const collapsed=!!CFG.ui.collapsed[g.id];
     const tagOrc = g.virtual ? '' : `<span class="tag orc" data-gedit="${g.id}" title="Editar orçamento do grupo">${(g.orc&&g.orc.modo!=='none')?(g.orc.modo==='pct'?'% do fat.':'R$ fixo'):'definir orçamento'}</span>`;
-    h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}</td>`;
+    h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}${months.map(m=>obsOf(g,m)?`<div class="gobs">📝 ${mLabel(m)}: ${E(obsOf(g,m))}</div>`:'').join('')}</td>`;
     months.forEach((mk,i)=>{
       const a=aggG(g.id,mk); const o=g.virtual?null:orcado(g,mk); const cons=o?a.t/o:null; const over=o!=null&&a.t>o+0.5;
-      h+=`<td class="num clk ms" data-gedit="${g.virtual?'':g.id}" data-gmk="${mk}">${o!=null?nf(o):''}</td><td class="num">${mny(a.r)}</td><td class="num prev">${mny(a.p)}</td>
+      h+=`<td class="num clk ms" data-gedit="${g.virtual?'':g.id}" data-gmk="${mk}"${obsOf(g,mk)?` title="${E(obsOf(g,mk))}"`:''}>${o!=null?nf(o):''}${obsOf(g,mk)?'<span class="sub">📝</span>':''}</td><td class="num">${mny(a.r)}${pcs(a.r,fatR(mk))}</td><td class="num prev">${mny(a.p)}${pcs(a.p,fatP(mk))}</td>
         <td class="num clk ${over?'neg':''}" data-open="g:${g.id}" data-mk="${mk}"><b>${mny(a.t,'0')}</b>${chipT(i,a.t,up,m=>aggG(g.id,m).t)}</td>
         <td class="num ${over?'oc-over':''}">${cons!=null?pc1(cons)+`<div class="bar ${over?'over':cons>.9?'warn':''}"><i style="width:${Math.min(100,Math.round(cons*100))}%"></i></div>`:''}</td>`;
     });
@@ -1049,23 +1073,30 @@ function renderTri(){
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true"><td class="catcol"><span class="arrow">▶</span>${E(cat)}${vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
       months.forEach((mk,i)=>{
         const v=catVal(cat,mk), t=tot(v); const b=fatBase(mk);
-        h+=`<td class="ms"></td><td class="num">${mny(v.r)}</td><td class="num prev">${mny(v.p)}</td>
+        h+=`<td class="ms"></td><td class="num">${mny(v.r)}${pcs(v.r,fatR(mk))}</td><td class="num prev${v.pd?' edt':''}"${v.pd?` title="inclui ajuste manual de previsão: ${v.pd>0?'+':''}${fmt2.format(v.pd)}"`:''}>${mny(v.p)}${pcs(v.p,fatP(mk))}</td>
           <td class="num ${vc&&vc.auto?'':'clk'}"${vc?'':` data-open="c:${E(cat)}" data-mk="${mk}"`}><b>${mny(t,'0')}</b>${t||tot(catVal(cat,months[i-1]||mk))?chipT(i,t,up,m=>tot(catVal(cat,m))):''}</td>
           <td class="num mut" title="% sobre o faturamento">${b&&t?pc1(t/b):''}</td>`;
       });
       h+=`</tr>`;
       if(open){
         if(vc){ h+=`<tr class="con"><td class="catcol">${vc.auto?'Calculado automaticamente (itens vendidos × custo médio).':'Linha editável — digite os valores na visão “Mês detalhado”.'}</td><td colspan="${months.length*W}"></td></tr>`; continue; }
-        const cons=Object.keys(M.con[cat]||{}).map(n=>({n,t:months.reduce((s,mk)=>{const x=((M.con[cat][n])||{})[mk]; return s+(x?Math.abs(x.r+x.p):0);},0)})).filter(x=>x.t>0).sort((a,b)=>b.t-a.t);
+        const man=new Set(Object.keys(CFG.conPrev||{}).filter(k=>k.startsWith(cat+'\u0001')).map(k=>k.slice(cat.length+1)));
+        const names=[...new Set([...Object.keys(M.con[cat]||{}),...man])];
+        const cons=names.map(n=>({n,t:months.reduce((s,mk)=>{const x=((M.con[cat]||{})[n]||{})[mk]; return s+(x?Math.abs(x.r+x.p):0);},0)})).filter(x=>x.t>0||man.has(x.n)).sort((a,b)=>b.t-a.t);
         if(!cons.length) h+=`<tr class="con"><td class="catcol">— sem lançamentos nestes meses</td><td colspan="${months.length*W}"></td></tr>`;
         for(const {n} of cons){
-          h+=`<tr class="con"><td class="catcol" title="${E(n)}">${E(short(n,48))}</td>`;
+          const onlyManual=!Object.values((M.con[cat]||{})[n]||{}).some(x=>x.n>0);
+          h+=`<tr class="con"><td class="catcol" title="${E(n)}">${E(short(n,44))}${onlyManual?` <span class="tag new" title="Previsão avulsa (sem lançamento no Tiny)">previsão</span><button class="ghost" data-delprev="${E(cat)}" data-pnome="${E(n)}" title="Remover esta previsão avulsa">✕</button>`:''}</td>`;
           months.forEach((mk,i)=>{
-            const x=(M.con[cat][n]||{})[mk]; const t=x?x.r+x.p:0; const pv=i?(M.con[cat][n]||{})[months[i-1]]:null; const pt=pv?pv.r+pv.p:0;
-            h+=`<td class="ms"></td><td class="num">${x?mny(x.r):''}</td><td class="num prev">${x?mny(x.p):''}</td><td class="num${x?' clk':''}"${x?` data-open="n:${E(cat)}\u0001${E(n)}" data-mk="${mk}"`:''}>${x?mny(t,'0'):''}${x&&i&&(pv||t)?`<span class="sub">${chip(t,pt,up)}</span>`:''}${x&&x.n>1?`<span class="sub" style="color:var(--mut)">${x.n} lanç.</span>`:''}</td><td></td>`;
+            const x=((M.con[cat]||{})[n]||{})[mk]; const t=x?x.r+x.p:0; const pv=i?((M.con[cat]||{})[n]||{})[months[i-1]]:null; const pt=pv?pv.r+pv.p:0;
+            const ed=x&&x.ed; const pval=x?x.p:0;
+            h+=`<td class="ms"></td><td class="num">${x&&x.r?mny(x.r):''}${x?pcs(x.r,fatR(mk)):''}</td>
+              <td class="num prev"><input class="cell pv${ed?' ed':''}" data-pcat="${E(cat)}" data-pnome="${E(n)}" data-pmk="${mk}" value="${(pval>0.004||ed)?fmtIn(pval):''}" inputmode="decimal" placeholder="—" title="${ed?'Previsão ajustada manualmente (original: '+fmt2.format(x.po||0)+'). Apague o campo para voltar ao valor dos lançamentos.':'Digite a previsão deste contato neste mês'}">${x?pcs(x.p,fatP(mk)):''}</td>
+              <td class="num${x&&x.n?' clk':''}"${x&&x.n?` data-open="n:${E(cat)}\u0001${E(n)}" data-mk="${mk}"`:''}>${x?mny(t,'0'):''}${x&&i&&(pv||t)?`<span class="sub">${chip(t,pt,up)}</span>`:''}${x&&x.n>1?`<span class="sub" style="color:var(--mut)">${x.n} lanç.</span>`:''}</td><td></td>`;
           });
           h+=`</tr>`;
         }
+        h+=`<tr class="con"><td class="catcol"><button class="addprev" data-addprev="${E(cat)}" title="Ex.: funcionário novo que ainda não tem lançamento">＋ adicionar previsão avulsa</button></td><td colspan="${months.length*W}"></td></tr>`;
       }
     }
   }
@@ -1106,7 +1137,7 @@ function renderGeral(){
     const cls=x.pct>1.0005?'over':(x.pct>=.85?'warn':'');
     const info=orcInfo(x.g,mk);
     bars+=`<div class="brow ${cls}" data-gedit="${x.g.id}" data-gmk="${mk}" title="Clique para editar o orçamento deste grupo · ${info?E(info.rot):''}">
-      <div class="bn">${E(x.g.nome)}<div style="font-size:11px;color:var(--mut);font-weight:600">${info?E(info.rot):''}</div></div>
+      <div class="bn">${E(x.g.nome)}<div style="font-size:11px;color:var(--mut);font-weight:600">${info?E(info.rot):''}</div>${obsOf(x.g,mk)?`<div class="gobs">📝 ${E(obsOf(x.g,mk))}</div>`:''}</div>
       <div class="btrack"><i class="r" style="width:${rw}%"></i><i class="p" style="width:${pw}%"></i></div>
       <div class="bv"><b>R$ ${nf(x.a.t)}</b> de R$ ${nf(x.o)} · ${x.o>0?fmt0.format(x.pct*100)+'%':'—'}${x.pct>1.0005?`<br><span class="neg">+R$ ${nf(x.a.t-x.o)} acima</span>`:''}</div></div>`;
   }
@@ -1292,13 +1323,16 @@ function openGroupEditor(gid, focusMk){
       <input type="text" id="geBase" value="${E(o.base||'')}" style="width:120px" inputmode="decimal" placeholder="padrão"><span id="geUn" style="color:var(--mut)"></span></div>
     <div style="color:var(--mut);font-size:12px;margin-bottom:6px">O valor padrão vale para todos os meses. Preencha um mês abaixo só para ajustá-lo (ex.: fornecedores mais alto de outubro a dezembro).</div>
     <div class="mg">${ms.map(m=>`<div><label>${mLabel(m)}</label><input type="text" data-om="${m}" value="${E((o.meses||{})[m]??'')}" inputmode="decimal" placeholder="padrão"><small data-oprev="${m}"></small></div>`).join('')}</div>
+    <h4>Observação por mês</h4>
+    <div style="color:var(--mut);font-size:12px;margin-bottom:6px">Anote o motivo do orçamento de um mês (ex.: “+1 funcionário a partir de novembro”). A nota aparece no grupo e no ícone 📝 das visões.</div>
+    ${ms.map(m=>`<div class="fr"><label style="min-width:56px">${mLabel(m)}</label><input type="text" data-ob="${m}" value="${E(((o.obs||{})[m])||'')}" style="flex:1;min-width:240px" placeholder="observação do mês"></div>`).join('')}
     <div class="acts"><button id="geDel" style="margin-right:auto;color:var(--bad)">Excluir grupo</button><button id="geCancel">Cancelar</button><button class="primary" id="geOk">Salvar</button></div>`);
   const refresh=()=>{
     const modo=document.getElementById('geModo').value; const base=pnum(document.getElementById('geBase').value);
     document.getElementById('geUn').textContent = modo==='pct'?'% do faturamento':(modo==='valor'?'R$ por mês':'');
     document.querySelectorAll('[data-om]').forEach(inp=>{
       const mk=inp.dataset.om; const raw=inp.value.trim(); const val=raw===''?base:pnum(raw); const small=document.querySelector(`[data-oprev="${mk}"]`);
-      small.textContent = modo==='pct' ? '≈ R$ '+fmt0.format(fatBase(mk)*val/100) : '';
+      small.textContent = (modo==='pct' ? '≈ R$ '+fmt0.format(fatBase(mk)*val/100)+' · ' : '')+'lançado R$ '+fmt0.format(aggG(gid,mk).t);
     });
   };
   document.querySelectorAll('#modal input, #modal select').forEach(el=>el.addEventListener('input',refresh)); refresh();
@@ -1314,7 +1348,10 @@ function openGroupEditor(gid, focusMk){
     document.querySelectorAll('[data-om]').forEach(inp=>{ const raw=inp.value.trim(); if(raw!=='') meses[inp.dataset.om]=pnum(raw); });
     const prevMeses=(g.orc&&g.orc.meses)||{}; // mantém ajustes de meses que não estão na tela (outros anos)
     for(const k of Object.keys(prevMeses)) if(!ms.includes(k)) meses[k]=prevMeses[k];
-    g.orc={modo,base:pnum(document.getElementById('geBase').value),meses};
+    const obs={}; document.querySelectorAll('[data-ob]').forEach(inp=>{ const t=inp.value.trim(); if(t) obs[inp.dataset.ob]=t; });
+    const prevObs=(g.orc&&g.orc.obs)||{}; for(const k of Object.keys(prevObs)) if(!ms.includes(k)) obs[k]=prevObs[k];
+    const keepSo=!!(g.orc&&g.orc.soMeses)&&document.getElementById('geBase').value.trim()==='';
+    g.orc=Object.assign({modo,base:pnum(document.getElementById('geBase').value),meses,obs}, keepSo?{soMeses:true}:{});
     saveCfg(); closeModal(); render();
   };
 }
@@ -1373,6 +1410,12 @@ const app=document.getElementById('app');
 app.addEventListener('click',e=>{
   if(e.target.tagName==='INPUT') return;
   const edit=e.target.closest('[data-gedit]'); if(edit && edit.dataset.gedit){ e.stopPropagation(); openGroupEditor(edit.dataset.gedit, edit.dataset.gmk||(ST.view==='mes'?ST.focus:null)); return; }
+  const ap=e.target.closest('[data-addprev]'); if(ap){ e.stopPropagation();
+    const nome=(prompt('Nome da previsão avulsa (ex.: Funcionário novo — Vendas):')||'').trim(); if(!nome) return;
+    const key=ap.dataset.addprev+'\u0001'+nome; CFG.conPrev=CFG.conPrev||{}; CFG.conPrev[key]=CFG.conPrev[key]||{}; ST.openCats.add(ap.dataset.addprev); saveCfg(); render(); return; }
+  const dp=e.target.closest('[data-delprev]'); if(dp){ e.stopPropagation();
+    if(!confirm('Remover a previsão avulsa “'+dp.dataset.pnome+'”?')) return;
+    delete CFG.conPrev[dp.dataset.delprev+'\u0001'+dp.dataset.pnome]; saveCfg(); render(); return; }
   const mvb=e.target.closest('[data-mvcat]'); if(mvb){
     e.stopPropagation(); const cat=mvb.dataset.mvcat;
     showMenu(mvb,[...CFG.groups.map(g=>({label:g.nome,cur:groupOfCat(cat)===g.id,fn:()=>moveCat(cat,g.id)})),{label:'— sem grupo —',fn:()=>moveCat(cat,'')}]); return; }
@@ -1392,6 +1435,13 @@ app.addEventListener('click',e=>{
 });
 app.addEventListener('change',e=>{
   const inp=e.target.closest('input.cell'); if(!inp) return;
+  if(inp.classList.contains('pv')){
+    const {pcat,pnome,pmk}=inp.dataset; const key=pcat+'\u0001'+pnome; const raw=inp.value.trim();
+    CFG.conPrev=CFG.conPrev||{}; const cur=CFG.conPrev[key]=CFG.conPrev[key]||{};
+    if(raw===''){ delete cur[pmk]; }
+    else { const x=((M.con[pcat]||{})[pnome]||{})[pmk]; cur[pmk]={v:pnum(raw), r0:x?x.r:0}; }
+    saveCfg(); render(); return;
+  }
   const {row,m,f}=inp.dataset; CFG.manual[row]=CFG.manual[row]||{}; CFG.manual[row][m]=CFG.manual[row][m]||{}; CFG.manual[row][m][f]=inp.value;
   saveCfg(); render();
 });
