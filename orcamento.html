@@ -152,40 +152,132 @@
   .note{margin:0 26px 12px; font-size:12.5px; color:var(--mut);}
   .empty{padding:28px; text-align:center; color:var(--mut);}
   @media (max-width:760px){ header, .toolbar, .kpis, .card, .tablewrap, .alert, #status, .note{margin-left:10px; margin-right:10px;} header{padding-left:10px;} .ld{grid-template-columns:1fr;} th.catcol, td.catcol{min-width:200px;} }
+
+  /* ═════ Layout "Sanbox Logística" ═════ */
+  body{background:var(--bg);}
+  .shell{max-width:1560px; margin:0 auto; padding:12px 22px 40px;}
+  .shell .card,.shell .kpis,.shell .toolbar,.shell .tablewrap,.shell .note,.shell .alert,.shell #status{margin-left:0; margin-right:0;}
+  .topbar{display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:#252B38; color:#fff; border-radius:14px; padding:9px 12px 9px 18px; box-shadow:0 2px 10px rgba(20,26,40,.22);}
+  .brand{font-family:'Bebas Neue','Nunito',sans-serif; font-size:23px; letter-spacing:.06em; line-height:1; display:flex; align-items:baseline; gap:9px;}
+  .brand em{font-style:normal;} .brand b{color:var(--or); font-weight:400;}
+  .brand span{font-family:'Nunito',sans-serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9AA6B8; font-weight:800;}
+  .pills{display:flex; gap:6px; flex-wrap:wrap; margin-left:10px;}
+  .pills button{background:transparent; color:#C9D2E0; border:none; border-radius:20px; padding:7px 16px; font-size:13px; font-weight:800;}
+  .pills button:hover{background:rgba(255,255,255,.09); color:#fff; border:none;}
+  .pills button.on{background:var(--or); color:#1A1F2E;}
+  .topbar .spacer{flex:1;}
+  .topbar .tb{background:transparent; color:#D6DDE9; border:1px solid rgba(255,255,255,.22); border-radius:20px; padding:6px 14px; font-size:12.5px;}
+  .topbar .tb:hover{border-color:var(--or); color:var(--or);}
+  .topbar .tb.pri{background:var(--or); border-color:var(--or); color:#1A1F2E; font-weight:800;}
+  .topbar .tb.pri:hover{background:#FFC85A; color:#1A1F2E;}
+  .titlebar{margin:20px 2px 4px; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 16px;}
+  .titlebar h1{font-size:26px; font-weight:900; letter-spacing:-.4px;}
+  .titlebar h1 i{font-style:normal; font-size:14px; color:var(--mut); border:1.5px solid var(--line2); border-radius:50%; display:inline-block; width:19px; height:19px; line-height:16px; text-align:center; vertical-align:4px; margin-left:6px; cursor:help; font-weight:800;}
+  #status{padding:0; font-size:12.5px; color:var(--mut); display:flex; align-items:center; gap:7px; flex-wrap:wrap;}
+  #status .dot{width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 0 3px rgba(22,163,74,.16); display:inline-block;}
+  #status .dot.off{background:#94A3B8; box-shadow:0 0 0 3px rgba(148,163,184,.2);}
+  .filters{display:flex; gap:8px 12px; align-items:center; flex-wrap:wrap; margin:12px 0 4px;}
+  .filters .f{display:flex; align-items:center; gap:7px; background:var(--paper); border:1px solid var(--line2); border-radius:10px; padding:4px 10px; font-size:11px; font-weight:800; color:var(--mut); text-transform:uppercase; letter-spacing:.1em;}
+  .filters .f select.sel{border:none; background:transparent; padding:3px 2px; font-size:13px; font-weight:800; color:var(--ink); text-transform:none; letter-spacing:0;}
+  .filters .f button.ghost{padding:0 5px; font-size:16px; line-height:1;}
+  .filters label.chk{background:var(--paper); border:1px solid var(--line2); border-radius:10px; padding:7px 11px;}
+  .filters .tip{color:var(--mut); font-size:12px;}
+  .sec{margin:22px 2px 9px; font-size:11px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--mut); display:flex; align-items:center; gap:10px;}
+  .sec::after{content:''; flex:1; height:1px; background:var(--line2);}
+  .sec .hint{letter-spacing:0; text-transform:none; font-weight:600; font-size:12px;}
+  .card > h2{display:none;}
+  .card{border:none; border-radius:14px;}
+  .kpis{gap:12px; display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr));}
+  .kpi{border:none; border-radius:14px; padding:15px 18px 14px; min-width:0;}
+  .kpi::before{height:3px;}
+  .kpi .l{font-size:10.5px; letter-spacing:.12em;}
+  .kpi .v{font-family:'Nunito',sans-serif; font-weight:900; font-size:27px; letter-spacing:-.5px; margin-top:3px; color:var(--ink);}
+  .kpi.bad .v{color:var(--bad);} .kpi.good .v{color:var(--good);}
+  .kpi .s{font-size:12px; margin-top:2px;}
+  .kpi .s .chip{margin-left:4px;}
+  .tabs{display:none;}
+  .tablewrap{border:none; border-radius:14px; margin-bottom:10px;}
+  thead th{font-size:10.5px; letter-spacing:.1em; font-weight:800;}
+  /* painéis da visão geral */
+  .grid2{display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:14px; align-items:stretch;}
+  .panel{background:var(--paper); border-radius:14px; box-shadow:var(--sh); padding:16px 18px;}
+  .panel h3{font-size:14px; font-weight:900; margin-bottom:2px;}
+  .panel .ps{font-size:12px; color:var(--mut); margin-bottom:12px;}
+  .brow{display:grid; grid-template-columns:minmax(120px,200px) 1fr auto; gap:6px 14px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line); cursor:pointer;}
+  .brow:last-child{border-bottom:none;} .brow:hover .bn{color:var(--od);}
+  .bn{font-size:13px; font-weight:700; line-height:1.25;}
+  .btrack{height:12px; border-radius:6px; background:#EDF1F6; position:relative; overflow:hidden; display:flex;}
+  .btrack i{display:block; height:100%;}
+  .btrack i.r{background:var(--good);} .btrack i.p{background:repeating-linear-gradient(135deg,rgba(22,163,74,.38) 0 5px,rgba(22,163,74,.2) 5px 10px);}
+  .brow.warn .btrack i.r{background:var(--warn);} .brow.warn .btrack i.p{background:repeating-linear-gradient(135deg,rgba(212,136,26,.4) 0 5px,rgba(212,136,26,.2) 5px 10px);}
+  .brow.over .btrack i.r{background:var(--bad);} .brow.over .btrack i.p{background:repeating-linear-gradient(135deg,rgba(220,38,38,.4) 0 5px,rgba(220,38,38,.2) 5px 10px);}
+  .bv{font-size:12px; color:var(--mut); text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .bv b{color:var(--ink); font-weight:800;} .brow.over .bv b{color:var(--bad);}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--mut); margin-top:10px;}
+  .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px;}
+  .legend .lg{display:flex; align-items:center;}
+  .legend .lg b{color:var(--ink); margin-left:5px; font-variant-numeric:tabular-nums;}
+  .stack{display:flex; height:34px; border-radius:9px; overflow:hidden; background:#EDF1F6; margin:6px 0 4px;}
+  .stack > div{min-width:2px; height:100%; position:relative;}
+  .stack > div:hover{filter:brightness(1.1);}
+  .stackleg{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:5px 18px; margin-top:12px;}
+  .stackleg .lg{display:flex; align-items:center; gap:7px; font-size:12.5px;}
+  .stackleg i{width:10px; height:10px; border-radius:3px; flex:none;}
+  .stackleg .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .stackleg b{font-variant-numeric:tabular-nums; font-weight:800;}
+  .agrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:12px;}
+  .acard{background:var(--paper); border-radius:14px; box-shadow:var(--sh); padding:14px 16px; display:flex; gap:14px; align-items:center; border-left:5px solid var(--out); cursor:default;}
+  .acard.red{border-left-color:var(--bad);} .acard.or{border-left-color:var(--or);} .acard.gr{border-left-color:var(--good);} .acard.pu{border-left-color:var(--new);}
+  .acard .n{font-family:'Nunito',sans-serif; font-weight:900; font-size:30px; letter-spacing:-.8px; line-height:1; min-width:58px; text-align:center;}
+  .acard.red .n{color:var(--bad);} .acard.or .n{color:var(--od);} .acard.gr .n{color:var(--good);} .acard.pu .n{color:var(--new);} .acard .n{color:var(--out);}
+  .acard .n.sm{font-size:21px; white-space:nowrap; letter-spacing:-.4px;}
+  .acard .t{font-size:13px; font-weight:800; line-height:1.25;} .acard .d{font-size:12px; color:var(--mut); margin-top:2px; line-height:1.3;}
+  .acard.clk{cursor:pointer;} .acard.clk:hover{box-shadow:0 2px 12px rgba(0,0,0,.14);}
+  .evo{display:flex; gap:10px; align-items:flex-end; overflow-x:auto; padding:4px 2px 0;}
+  .evcol{flex:1 0 74px; display:flex; flex-direction:column; align-items:center; cursor:pointer; border-radius:10px; padding:4px 2px 6px;}
+  .evcol:hover,.evcol.focus{background:var(--focus);}
+  .evbars{height:170px; display:flex; align-items:flex-end; gap:5px;}
+  .evbars i{display:block; width:22px; border-radius:5px 5px 0 0; min-height:2px;}
+  .evbars i.a{background:var(--or);} .evbars i.b{background:#3A4152;}
+  .evm{font-size:12px; font-weight:800; margin-top:6px;} .evr{font-size:11.5px; font-weight:800; font-variant-numeric:tabular-nums;}
+  .evr.g{color:var(--good);} .evr.r{color:var(--bad);} .evs{font-size:10.5px; color:var(--mut);}
+  .empty2{color:var(--mut); font-size:13px; padding:14px 2px;}
+  @media (max-width:980px){ .grid2{grid-template-columns:1fr;} }
+  @media (max-width:760px){ .shell{padding:10px 10px 30px;} .brow{grid-template-columns:1fr auto;} .brow .btrack{grid-column:1/-1; order:3;} .titlebar h1{font-size:22px;} .pills{margin-left:0;} }
 </style>
 </head>
 <body>
-<header>
-  <h1>Orçamento Financeiro</h1>
-  <span class="sub">por competência · realizado = pago · previsto = em aberto · orçado = meta de cada grupo</span>
+<div class="shell">
+<div class="topbar">
+  <div class="brand"><em><b>SAN</b>BOX</em><span>Financeiro</span></div>
+  <nav class="pills">
+    <button id="tabGeral">Visão geral</button><button id="tabMes">Mês detalhado</button><button id="tabComp">Comparativo mês a mês</button>
+  </nav>
   <span class="spacer"></span>
-  <label style="font-size:13px;color:var(--mut)">Ano: <select class="sel" id="selYear"></select></label>
-  <label class="chk"><input type="checkbox" id="chkCents"> centavos</label>
-  <button id="btnCfg">Grupos e orçamentos</button>
-  <button id="btnXls">Exportar Excel</button>
-  <button class="primary" id="btnLive">Atualizar agora</button>
-</header>
-<div id="status"></div>
-<div id="alerts"></div>
-<div class="card" id="vendasCard"></div>
-<div class="kpis" id="kpis"></div>
-<div class="toolbar">
-  <div class="tabs"><button id="tabMes">Mês detalhado (orçado × realizado)</button><button id="tabComp">Comparativo mês a mês</button></div>
-  <span id="ctlMes" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <button class="ghost" id="btnPrev" title="Mês anterior">‹</button>
-    <select class="sel" id="selFocus"></select>
-    <button class="ghost" id="btnNext" title="Próximo mês">›</button>
-    <label style="font-size:12.5px;color:var(--mut)">Lançamentos por: <select class="sel" id="selSort"><option value="val">maior valor</option><option value="venc">vencimento</option><option value="nome">contato</option></select></label>
-  </span>
-  <span id="ctlComp" style="display:none;gap:10px;align-items:center;flex-wrap:wrap">
-    <label style="font-size:12.5px;color:var(--mut)">Exibir: <select class="sel" id="selMetric">
-      <option value="tot">Total do mês (realizado + previsto)</option><option value="r">Só realizado</option><option value="p">Só previsto</option>
-      <option value="pct">% sobre o faturamento</option><option value="orc">Orçado</option><option value="saldo">Saldo (orçado − total)</option></select></label>
-  </span>
-  <label class="chk"><input type="checkbox" id="chkEmpty"> mostrar categorias sem movimento</label>
-  <span style="color:var(--mut);font-size:12px">Dica: arraste uma categoria para outro grupo, ou use ↪.</span>
+  <button class="tb" id="btnCfg">Grupos e orçamentos</button>
+  <button class="tb" id="btnXls">Exportar Excel</button>
+  <button class="tb pri" id="btnLive">Atualizar agora</button>
 </div>
+<div class="titlebar"><h1>Orçamento <i title="Por competência · realizado = pago · previsto = em aberto · orçado = meta de cada grupo (em R$ ou % do faturamento)">i</i></h1><div id="status"></div></div>
+<div class="filters">
+  <div class="f">Ano <select class="sel" id="selYear"></select></div>
+  <div class="f" id="ctlFocus">Mês <button class="ghost" id="btnPrev" title="Mês anterior">‹</button><select class="sel" id="selFocus"></select><button class="ghost" id="btnNext" title="Próximo mês">›</button></div>
+  <div class="f" id="ctlMes">Lançamentos por <select class="sel" id="selSort"><option value="val">maior valor</option><option value="venc">vencimento</option><option value="nome">contato</option></select></div>
+  <div class="f" id="ctlComp" style="display:none">Exibir <select class="sel" id="selMetric">
+      <option value="tot">Total do mês (realizado + previsto)</option><option value="r">Só realizado</option><option value="p">Só previsto</option>
+      <option value="pct">% sobre o faturamento</option><option value="orc">Orçado</option><option value="saldo">Saldo (orçado − total)</option></select></div>
+  <label class="chk"><input type="checkbox" id="chkCents"> centavos</label>
+  <label class="chk" id="lblEmpty"><input type="checkbox" id="chkEmpty"> categorias sem movimento</label>
+</div>
+<div id="alerts"></div>
+<div class="sec">Resultado do mês</div>
+<div class="kpis" id="kpis"></div>
+<div id="geral"></div>
+<div class="sec" id="secVendas">Vendas <span class="hint">clique no mês para abrir o orçamento dele · ▶ abre os canais · previsto = meta</span></div>
+<div class="card" id="vendasCard"></div>
+<div class="sec" id="secDet">Detalhamento <span class="hint" id="detHint">arraste uma categoria para outro grupo, ou use ↪</span></div>
 <div class="tablewrap" id="app"></div>
+</div>
 
 <div class="veil" id="veil"></div>
 <div class="drawer" id="drawer"></div>
@@ -338,7 +430,7 @@ async function stSet(k,v){
 function seedCfg(){
   const groups=SEED.map(s=>({id:s.id,nome:s.nome,tipo:s.tipo,orc:{modo:'none',base:0,meses:{}}}));
   const catGroup={}; SEED.forEach(s=>s.cats.forEach(c=>{catGroup[c]=s.id;}));
-  return {v:1,groups,catGroup,lineMoves:{},contactRules:[],manual:{},ui:{cents:false,view:'mes',metric:'tot',sort:'val',showEmpty:false,collapsed:{}}};
+  return {v:1,groups,catGroup,lineMoves:{},contactRules:[],manual:{},ui:{cents:false,view:'geral',metric:'tot',sort:'val',showEmpty:false,collapsed:{}}};
 }
 let CFG=seedCfg();
 const saveCfg = () => stSet('orc_cfg', CFG);
@@ -356,7 +448,7 @@ async function loadCfg(){
 }
 
 /* ══════════ ESTADO DE TELA ══════════ */
-const ST={view:'mes',focus:CUR,year:String(NOW.getFullYear()),metric:'tot',sort:'val',showEmpty:false,
+const ST={view:'geral',focus:CUR,year:String(NOW.getFullYear()),metric:'tot',sort:'val',showEmpty:false,
   openCats:new Set(),openLines:new Set(),openCons:new Set(),openVendas:false};
 const getYears = () => [...new Set(STATE.meses.map(m=>m.slice(3)))].sort();
 const monthsOf = y => y==='TODOS' ? STATE.meses : STATE.meses.filter(m=>m.endsWith('/'+y));
@@ -700,11 +792,12 @@ function renderKPIs(){
   let orcTot=0, gastoTot=0, estourados=[];
   for(const g of CFG.groups){ const o=orcado(g,mk); if(o==null) continue; const a=aggG(g.id,mk); orcTot+=o; gastoTot+=a.t; if(a.t>o+0.5) estourados.push(g.nome); }
   const k=(l,v,s,cls='')=>`<div class="kpi ${cls}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  const pv=resumoMes(prevMk(mk)); const hasPv=STATE.meses.includes(prevMk(mk));
   document.getElementById('kpis').innerHTML=
-    k('Faturamento base · '+mLabel(mk),'R$ '+nf(rs.base),isPast(mk)?'realizado do mês':'meta do mês (ou realizado, se maior)')+
-    k('Despesas do mês','R$ '+nf(rs.acc.despesa.t), rs.base?pc1(rs.acc.despesa.t/rs.base)+' do faturamento':'')+
-    k('Resultado projetado','R$ '+nf(rs.res.t), (rs.base?pc1(rs.res.t/rs.base)+' do faturamento':'')+(rs.aj>0?' · custo dos produtos estimado':''), rs.res.t<0?'bad':'good')+
-    k('Grupos com orçamento', orcTot?('R$ '+nf(gastoTot)+' de R$ '+nf(orcTot)):'—', estourados.length?('Estourados: '+estourados.join(', ')):(orcTot?'nenhum estourado':'defina em “Grupos e orçamentos”'), estourados.length?'bad':'');
+    k('Faturamento base · '+mLabel(mk),'R$ '+nf(rs.base),(isPast(mk)?'realizado do mês':'meta do mês (ou realizado, se maior)')+(hasPv?chip(rs.base,pv.base,true):''))+
+    k('Despesas do mês','R$ '+nf(rs.acc.despesa.t), (rs.base?pc1(rs.acc.despesa.t/rs.base)+' do faturamento':'')+(hasPv?chip(rs.acc.despesa.t,pv.acc.despesa.t,false):''))+
+    k('Resultado projetado','R$ '+nf(rs.res.t), (rs.base?pc1(rs.res.t/rs.base)+' do faturamento':'')+(rs.aj>0?' · custo dos produtos estimado':'')+(hasPv?chip(rs.res.t,pv.res.t,true):''), rs.res.t<0?'bad':'good')+
+    k('Grupos com orçamento', orcTot?('R$ '+kM(gastoTot)+' de R$ '+kM(orcTot)):'—', estourados.length?('Estourados: '+estourados.join(', ')):(orcTot?'nenhum estourado':'defina em “Grupos e orçamentos”'), estourados.length?'bad':'');
 }
 
 /* ══════════ VISÃO: MÊS DETALHADO ══════════ */
@@ -904,23 +997,112 @@ function renderComp(){
   return h;
 }
 
+
+/* ══════════ VISÃO GERAL (layout estilo Sanbox Logística) ══════════ */
+const kM = v => { const a=Math.abs(v); const sg=v<0?'−':''; return sg+(a>=1e6?fmt1.format(a/1e6)+' mi':a>=1e4?fmt0.format(a/1e3)+' mil':a>=1e3?fmt1.format(a/1e3)+' mil':fmt0.format(a)); };
+const PAL_DED=['#B7690A','#D4881A','#F5A623','#FFC85A','#F7D99A'];
+const PAL_DES=['#1F3A52','#2B4A66','#3F6B8F','#5E8FB3','#86AECB','#A9C6DB','#64748B','#94A3B8','#C4CEDB'];
+function renderGeral(){
+  const mk=ST.focus, rs=resumoMes(mk), pmk=prevMk(mk);
+  const gs=[...CFG.groups,NONE_G].filter(g=>g.id!=='_none'||(BUCKET._none||[]).some(c=>catHasData(c)));
+  /* barras orçado × realizado */
+  const orcG=[], semOrc=[];
+  for(const g of gs){ if(g.tipo==='receita'||g.tipo==='fora') continue; const a=aggG(g.id,mk);
+    const o=g.id==='_none'?null:orcado(g,mk);
+    if(o==null){ if(a.t>0.5) semOrc.push({g,a}); continue; }
+    orcG.push({g,a,o,pct:o>0?a.t/o:(a.t>0?9:0)}); }
+  orcG.sort((x,y)=>y.pct-x.pct);
+  let bars='';
+  if(!orcG.length) bars=`<div class="empty2">Nenhum grupo tem orçamento definido ainda. Use <b>Grupos e orçamentos</b> (canto superior) para definir um valor em R$ ou um % do faturamento.</div>`;
+  for(const x of orcG){
+    const rw=x.o>0?Math.min(100,x.a.r/x.o*100):(x.a.r>0?100:0); const pw=x.o>0?Math.max(0,Math.min(100-rw,x.a.p/x.o*100)):0;
+    const cls=x.pct>1.0005?'over':(x.pct>=.85?'warn':'');
+    const info=orcInfo(x.g,mk);
+    bars+=`<div class="brow ${cls}" data-gedit="${x.g.id}" data-gmk="${mk}" title="Clique para editar o orçamento deste grupo · ${info?E(info.rot):''}">
+      <div class="bn">${E(x.g.nome)}<div style="font-size:11px;color:var(--mut);font-weight:600">${info?E(info.rot):''}</div></div>
+      <div class="btrack"><i class="r" style="width:${rw}%"></i><i class="p" style="width:${pw}%"></i></div>
+      <div class="bv"><b>R$ ${nf(x.a.t)}</b> de R$ ${nf(x.o)} · ${x.o>0?fmt0.format(x.pct*100)+'%':'—'}${x.pct>1.0005?`<br><span class="neg">+R$ ${nf(x.a.t-x.o)} acima</span>`:''}</div></div>`;
+  }
+  if(semOrc.length) bars+=`<div class="ps" style="margin:12px 0 0">Sem orçamento definido: ${semOrc.sort((a,b)=>b.a.t-a.a.t).map(x=>`<a href="#" data-gedit="${x.g.id==='_none'?'':x.g.id}" data-gmk="${mk}" style="color:var(--ink);font-weight:700;text-decoration:none">${E(x.g.nome.replace(' — classificar',''))} <span style="color:var(--mut);font-weight:600">R$ ${kM(x.a.t)}</span></a>`).join(' · ')}</div>`;
+  const legend=`<div class="legend"><span class="lg"><i style="background:var(--good)"></i>realizado (pago)</span><span class="lg"><i style="background:repeating-linear-gradient(135deg,rgba(22,163,74,.5) 0 4px,rgba(22,163,74,.22) 4px 8px)"></i>previsto (em aberto)</span><span class="lg"><i style="background:var(--warn)"></i>≥ 85% do orçado</span><span class="lg"><i style="background:var(--bad)"></i>estourou</span></div>`;
+  /* para onde vai cada R$ 100 */
+  const D=rs.base+rs.acc.receita.t;
+  let segs=[];
+  if(D>0){
+    let di=0, si=0;
+    for(const g of gs){ if(g.tipo!=='deducao'&&g.tipo!=='despesa') continue; const a=aggG(g.id,mk); if(a.t<=0.5) continue;
+      segs.push({nm:g.nome.replace(' — classificar',''),v:a.t,tipo:g.tipo}); }
+    if(rs.aj>0.5) segs.push({nm:'Custo dos produtos (estimado)',v:rs.aj,tipo:'deducao'});
+    segs.sort((a,b)=>(a.tipo===b.tipo?0:(a.tipo==='deducao'?-1:1))||b.v-a.v);
+    let ded=0,des=0; for(const x of segs){ x.c = x.tipo==='deducao' ? PAL_DED[Math.min(ded++,PAL_DED.length-1)] : PAL_DES[Math.min(des++,PAL_DES.length-1)]; }
+  }
+  const gasto=segs.reduce((a,x)=>a+x.v,0); const sobra=D-gasto;
+  let stack='';
+  if(D>0){
+    const den=Math.max(D,gasto);
+    const all=[...segs]; if(sobra>0.5) all.push({nm:'Resultado (sobra)',v:sobra,c:'#16A34A'});
+    stack=`<div class="stack">${all.map(x=>`<div style="width:${x.v/den*100}%;background:${x.c}" title="${E(x.nm)} · R$ ${nf(x.v)} · ${pc1(x.v/D)}"></div>`).join('')}</div>
+      <div class="stackleg">${all.map(x=>`<div class="lg"><i style="background:${x.c}"></i><span class="nm" title="${E(x.nm)}">${E(x.nm)}</span><b>R$ ${fmt2.format(x.v/D*100)}</b></div>`).join('')}</div>
+      ${sobra<-0.5?`<div class="ps neg" style="margin:10px 0 0;font-weight:700">Custos e despesas passam do faturamento em R$ ${nf(-sobra)} (${pc1(-sobra/D)}).</div>`:''}`;
+  } else stack=`<div class="empty2">Sem faturamento base para ${mLabel(mk)}.</div>`;
+  /* alertas */
+  const estour=orcG.filter(x=>x.pct>1.0005), perto=orcG.filter(x=>x.pct>=.85&&x.pct<=1.0005);
+  const none=(BUCKET._none||[]).filter(c=>catHasData(c));
+  let venN=0, venV=0; for(const id in M.byId){ const l=M.byId[id]; if(l.ecomp===mk && l.sit!=='pago' && l.venc && l.venc<TODAY){ venN++; venV+=l.p; } }
+  const deltas=[]; if(STATE.meses.includes(pmk)) for(const g of gs){ if(g.tipo!=='despesa'&&g.tipo!=='deducao') continue; const a=aggG(g.id,mk).t, b=aggG(g.id,pmk).t; if(Math.abs(a-b)>=1&&Math.max(a,b)>0) deltas.push({g,a,b,d:a-b}); }
+  deltas.sort((x,y)=>y.d-x.d);
+  const alta=deltas[0]&&deltas[0].d>0?deltas[0]:null, queda=deltas.length&&deltas[deltas.length-1].d<0?deltas[deltas.length-1]:null;
+  const ac=(cls,n,t,d,attr='')=>`<div class="acard ${cls}${attr?' clk':''}" ${attr}><div class="n${String(n).length>3?' sm':''}">${n}</div><div><div class="t">${t}</div><div class="d">${d}</div></div></div>`;
+  let al='';
+  al+=ac(estour.length?'red':'gr',estour.length, estour.length?'Grupos acima do orçado':'Nenhum grupo estourado', estour.length?E(estour.slice(0,3).map(x=>x.g.nome).join(', '))+' · R$ '+nf(estour.reduce((a,x)=>a+x.a.t-x.o,0))+' acima':(orcG.length?'Tudo dentro do orçado em '+mLabel(mk):'Defina orçamentos em “Grupos e orçamentos”'));
+  al+=ac(perto.length?'or':'', perto.length,'Perto do limite (≥ 85%)', perto.length?E(perto.slice(0,3).map(x=>x.g.nome+' '+fmt0.format(x.pct*100)+'%').join(', ')):'Nenhum grupo entre 85% e 100%');
+  al+=ac(venN?'red':'', venN,'Vencidos em aberto', venN?'R$ '+nf(venV)+' de contas com vencimento passado em '+mLabel(mk):'Nada vencido sem pagar nesta competência');
+  al+=ac(none.length?'pu':'', none.length,'Categorias sem grupo', none.length?E(none.slice(0,3).join(', '))+(none.length>3?'…':'')+' · contam como despesa':'Todas as categorias estão em algum grupo');
+  if(alta) al+=ac('or','+'+kM(alta.d),'Maior alta vs '+mLabel(pmk), E(alta.g.nome)+' · R$ '+nf(alta.b)+' → R$ '+nf(alta.a));
+  if(queda) al+=ac('gr','−'+kM(-queda.d).replace('−',''),'Maior queda vs '+mLabel(pmk), E(queda.g.nome)+' · R$ '+nf(queda.b)+' → R$ '+nf(queda.a));
+  /* evolução */
+  const evs=monthsOf(ST.year).map(m=>{ const r=resumoMes(m); return {m,base:r.base,cost:r.base-r.res.t,res:r.res.t,fut:!isPast(m)}; }).filter(x=>x.base>1||Math.abs(x.cost)>1);
+  const mx=Math.max(1,...evs.map(x=>Math.max(x.base,x.cost)));
+  const evo=evs.length?`<div class="evo">${evs.map(x=>`<div class="evcol${x.m===mk?' focus':''}" data-gfocus="${x.m}" title="${mLong(x.m)}\nFaturamento base: R$ ${nf(x.base)}\nCustos e despesas: R$ ${nf(x.cost)}\nResultado: R$ ${nf(x.res)}">
+      <div class="evbars"><i class="a" style="height:${Math.max(1,x.base/mx*170)}px"></i><i class="b" style="height:${Math.max(1,Math.max(0,x.cost)/mx*170)}px"></i></div>
+      <div class="evm">${mLabel(x.m)}</div><div class="evr ${x.res<0?'r':'g'}">${x.res<0?'−':''}R$ ${kM(Math.abs(x.res))}</div><div class="evs">${x.fut?'projetado':'realizado'}</div></div>`).join('')}</div>
+    <div class="legend"><span class="lg"><i style="background:var(--or)"></i>Faturamento base</span><span class="lg"><i style="background:#3A4152"></i>Custos e despesas</span><span class="lg"><i style="background:var(--good)"></i>resultado (sob o mês)</span><span style="margin-left:auto">clique numa coluna para focar o mês</span></div>`
+    :`<div class="empty2">Sem meses com movimento em ${E(String(ST.year))}.</div>`;
+  document.getElementById('geral').innerHTML=
+    `<div class="sec">Orçamento · ${mLong(mk)}</div>
+     <div class="grid2">
+       <div class="panel"><h3>Orçado × realizado por grupo</h3><div class="ps">Quanto cada grupo já consumiu da meta do mês · clique para editar a meta</div>${bars}${orcG.length?legend:''}</div>
+       <div class="panel"><h3>Para onde vai cada R$ 100 do faturamento</h3><div class="ps">Deduções, despesas e o que sobra · base R$ ${nf(D)}</div>${stack}</div>
+     </div>
+     <div class="sec">Alertas</div><div class="agrid">${al}</div>
+     <div class="sec">Evolução mês a mês <span class="hint">faturamento × custos e despesas · ${E(String(ST.year==='TODOS'?'todos os meses':ST.year))}</span></div>
+     <div class="panel">${evo}</div>`;
+}
+document.getElementById('geral').addEventListener('click',e=>{
+  const ed=e.target.closest('[data-gedit]'); if(ed){ e.preventDefault(); if(ed.dataset.gedit) openGroupEditor(ed.dataset.gedit, ed.dataset.gmk||ST.focus); return; }
+  const fc=e.target.closest('[data-gfocus]'); if(fc){ ST.focus=fc.dataset.gfocus; render(); }
+});
+
 /* ══════════ RENDER GERAL ══════════ */
 function keepScroll(el, fn){
   const t=el.scrollTop, l=el.scrollLeft; fn(); el.scrollTop=t; el.scrollLeft=l;
 }
 function render(){
   buildModel(); buildBuckets();
-  document.getElementById('status').textContent =
-    (LIVE?'🟢 AO VIVO · atualizado '+STATE.geradoEm:'Dados embutidos de '+STATE.geradoEm)+' · competência via conta_id · vendas pela regra do dashboard · '+STATE.metaInfo+' · atualização automática às 12:00 e 23:40';
+  document.getElementById('status').innerHTML =
+    `<span class="dot${LIVE?'':' off'}"></span>`+E((LIVE?'Ao vivo · atualizado '+STATE.geradoEm:'Dados embutidos de '+STATE.geradoEm)+' · '+STATE.metaInfo+' · atualiza às 12:00 e 23:40');
   renderAlerts();
   renderVendas();
   renderKPIs();
   const app=document.getElementById('app');
-  keepScroll(app,()=>{ app.innerHTML = ST.view==='mes' ? renderMes() : renderComp(); });
-  document.getElementById('tabMes').classList.toggle('on',ST.view==='mes');
-  document.getElementById('tabComp').classList.toggle('on',ST.view==='comp');
-  document.getElementById('ctlMes').style.display=ST.view==='mes'?'flex':'none';
-  document.getElementById('ctlComp').style.display=ST.view==='comp'?'flex':'none';
+  const V=ST.view;
+  if(V==='geral') renderGeral(); else document.getElementById('geral').innerHTML='';
+  if(V!=='geral') keepScroll(app,()=>{ app.innerHTML = V==='mes' ? renderMes() : renderComp(); });
+  for(const [id,v] of [['tabGeral','geral'],['tabMes','mes'],['tabComp','comp']]) document.getElementById(id).classList.toggle('on',V===v);
+  const dsp=(id,on,d='flex')=>document.getElementById(id).style.display=on?d:'none';
+  dsp('ctlMes',V==='mes'); dsp('ctlComp',V==='comp'); dsp('ctlFocus',V!=='comp'); dsp('lblEmpty',V!=='geral','inline-flex');
+  dsp('app',V!=='geral','block'); dsp('secDet',V!=='geral'); dsp('secVendas',true);
+  document.getElementById('detHint').textContent = V==='mes' ? 'clique numa categoria para abrir os lançamentos · arraste para outro grupo ou use ↪' : 'variação de cada mês contra o anterior';
   fillFocus();
   if(DR) renderDrawer();
 }
@@ -1150,6 +1332,7 @@ document.getElementById('veil').addEventListener('click',()=>{ if(document.getEl
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.getElementById('modal').classList.contains('on')) closeModal(); else closeAll(); } });
 document.addEventListener('click',e=>{ if(!e.target.closest('#menu')&&!e.target.closest('[data-mvcat]')) document.getElementById('menu').classList.remove('on'); });
 
+document.getElementById('tabGeral').onclick=()=>{ ST.view='geral'; CFG.ui.view='geral'; render(); };
 document.getElementById('tabMes').onclick=()=>{ ST.view='mes'; CFG.ui.view='mes'; render(); };
 document.getElementById('tabComp').onclick=()=>{ ST.view='comp'; CFG.ui.view='comp'; render(); };
 document.getElementById('selYear').onchange=e=>{ ST.year=e.target.value; render(); };
@@ -1202,7 +1385,7 @@ function exportXLSX(){
 /* ══════════ INÍCIO ══════════ */
 (async()=>{
   await loadCfg(); if(applySug()) await saveCfg();
-  CENTS=!!CFG.ui.cents; ST.view=CFG.ui.view||'mes'; ST.metric=CFG.ui.metric||'tot'; ST.sort=CFG.ui.sort||'val'; ST.showEmpty=!!CFG.ui.showEmpty;
+  CENTS=!!CFG.ui.cents; ST.view=CFG.ui.view||'geral'; ST.metric=CFG.ui.metric||'tot'; ST.sort=CFG.ui.sort||'val'; ST.showEmpty=!!CFG.ui.showEmpty;
   document.getElementById('chkCents').checked=CENTS; document.getElementById('chkEmpty').checked=ST.showEmpty;
   document.getElementById('selSort').value=ST.sort; document.getElementById('selMetric').value=ST.metric;
   fixSelections();
