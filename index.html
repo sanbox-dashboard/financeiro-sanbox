@@ -353,7 +353,7 @@ let _dreLoaded=false;
 function loadDRE(){ if(_dreLoaded) return; _dreLoaded=true; document.getElementById('dreFrame').src='dre.html'; }
 // aba Orçamento: carrega orcamento.html (grupos de orçamento, comparativo mês a mês) no iframe, uma única vez
 let _orcamLoaded=false;
-function loadORCAM(){ if(_orcamLoaded) return; _orcamLoaded=true; document.getElementById('orcamFrame').src='orcamento.html'; }
+function loadORCAM(){ if(_orcamLoaded) return; _orcamLoaded=true; document.getElementById('orcamFrame').src='orcamento.html?v='+Date.now(); }
 
 // ═══════════════════════ HELPERS ═══════════════════════
 // Número em qualquer formato: BR "1.234,56" ou US "1,234.56"/"905.97" -> float
