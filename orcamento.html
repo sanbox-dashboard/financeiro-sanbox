@@ -14,6 +14,7 @@
     --ded:#B7690A; --ded-bg:#FDF4E4;
     --des:#2B4A66; --des-bg:#EEF3F8;
     --out:#64748B; --out-bg:#F1F4F8;
+    --fin:#7C3AED; --fin-bg:#F4EFFD;
     --good:#16A34A; --bad:#DC2626; --warn:#D4881A; --new:#8A3FFC;
     --focus:rgba(245,166,35,.14); --prev-tint:rgba(245,166,35,.07);
     --sh:0 1px 8px rgba(0,0,0,.07);
@@ -81,6 +82,13 @@
   tr.grp.t-deducao td{background:var(--ded-bg);} tr.grp.t-deducao td.catcol{border-left-color:var(--ded); color:var(--ded);}
   tr.grp.t-despesa td{background:var(--des-bg);} tr.grp.t-despesa td.catcol{border-left-color:var(--des); color:var(--des);}
   tr.grp.t-fora td{background:var(--out-bg);} tr.grp.t-fora td.catcol{border-left-color:var(--out); color:var(--out);}
+  tr.grp.t-financeiro td{background:var(--fin-bg);} tr.grp.t-financeiro td.catcol{border-left-color:var(--fin); color:var(--fin);}
+  tr.par td{font-weight:900; font-size:12.5px; text-transform:uppercase; letter-spacing:.5px; color:#fff; background:#1A1F2E; border-top:2px solid #1A1F2E; cursor:pointer;}
+  tr.par td.catcol{background:#1A1F2E; border-left:5px solid var(--out);}
+  tr.par td .sub{color:rgba(255,255,255,.7)!important;} tr.par td .tag{background:rgba(255,255,255,.14); color:#fff; border-color:transparent;}
+  tr.par.t-receita td.catcol{border-left-color:var(--rec);} tr.par.t-deducao td.catcol{border-left-color:var(--ded);}
+  tr.par.t-despesa td.catcol{border-left-color:var(--des);} tr.par.t-financeiro td.catcol{border-left-color:var(--fin);} tr.par.t-fora td.catcol{border-left-color:var(--out);}
+  tr.par .arrow{color:#fff;}
   tr.grp.t-none td{background:#F7F3FF;} tr.grp.t-none td.catcol{border-left-color:var(--new); color:var(--new);}
   tr.grp.dropping td{outline:2px dashed var(--new); outline-offset:-2px;}
   tr.grp td.catcol .gname{color:inherit;}
@@ -413,8 +421,8 @@ const SEED = [
   {id:'g_fre',nome:'Fretes',tipo:'despesa',cats:['Frete Venda','Frete Compra']},
   {id:'g_adm',nome:'Administrativo e serviços',tipo:'despesa',cats:['Contabilidade','Juridico','Papelaria','Telecomunicacao, internet','Alugueis e condominio','Agua, luz','Servicos Gerais','Prestacao de Servico','Supermercado','Outros','Viagem','Cursos','Insumos Sanbox']},
   {id:'g_aju',nome:'Ajustes de pedidos',tipo:'despesa',cats:['Estorno de pedido','Desconto de Pedido','Reembolso Parcial','Ressarcimento RMA']},
-  {id:'g_inv',nome:'Investimentos e ativos',tipo:'despesa',cats:['Maquinas e Equipamentos','Ativo Imobilizado','Ativo Imobilizado Galpao','Importacao','Investimentos','Aplicacoes Financeiras']},
-  {id:'g_fin',nome:'Custos financeiros',tipo:'despesa',cats:['Emprestimo','Finimpe','Verbas','Outros Custos / Créditos']},
+  {id:'g_inv',nome:'Investimentos e ativos',tipo:'financeiro',cats:['Maquinas e Equipamentos','Ativo Imobilizado','Ativo Imobilizado Galpao','Importacao','Investimentos','Aplicacoes Financeiras']},
+  {id:'g_fin',nome:'Custos financeiros',tipo:'financeiro',cats:['Emprestimo','Finimpe','Verbas','Outros Custos / Créditos']},
   {id:'g_forn',nome:'Fornecedores (fora do resultado)',tipo:'fora',cats:['Fornecedores']}
 ];
 /* ══════════ ORÇAMENTO SUGERIDO PELO ANALISTA (aplicado só em grupos ainda sem orçamento) ══════════ */
@@ -433,7 +441,10 @@ function applySug(){
   }
   CFG.sugAplicada=ORC_SUG.versao; return true;
 }
-const TIPOS = {receita:'Receita', deducao:'Dedução da venda', despesa:'Despesa', fora:'Fora do resultado'};
+// 4 categorias pai do orçamento (+ fora do resultado). Cada grupo pertence a uma delas e pode ser movido.
+const TIPOS = {receita:'Receitas complementares', deducao:'Deduções de vendas', despesa:'Custos fixos', financeiro:'Despesas financeiras', fora:'Fora do resultado'};
+const TIPO_ORD = ['receita','deducao','despesa','financeiro','fora'];
+const tipoDe = g => g.virtual ? 'despesa' : (TIPOS[g.tipo] ? g.tipo : 'despesa');
 const NONE_G = {id:'_none', nome:'Sem grupo — classificar', tipo:'despesa', orc:{modo:'none',base:0,meses:{}}, virtual:true};
 
 /* ══════════ CONFIGURAÇÃO (salva no navegador) ══════════ */
@@ -452,13 +463,18 @@ async function stSet(k,v){
 function seedCfg(){
   const groups=SEED.map(s=>({id:s.id,nome:s.nome,tipo:s.tipo,orc:{modo:'none',base:0,meses:{}}}));
   const catGroup={}; SEED.forEach(s=>s.cats.forEach(c=>{catGroup[c]=s.id;}));
-  return {v:1,groups,catGroup,lineMoves:{},contactRules:[],manual:{},conPrev:{},ui:{cents:false,view:'geral',metric:'tot',sort:'val',showEmpty:false,collapsed:{}}};
+  return {v:1,migPais:1,groups,catGroup,lineMoves:{},contactRules:[],manual:{},conPrev:{},ui:{cents:false,view:'geral',metric:'tot',sort:'val',showEmpty:false,collapsed:{}}};
 }
 let CFG=seedCfg();
 const saveCfg = () => stSet('orc_cfg', CFG);
 async function loadCfg(){
   const c=await stGet('orc_cfg');
-  if(c && c.groups){ CFG=Object.assign(seedCfg(),c); CFG.ui=Object.assign(seedCfg().ui,c.ui||{}); return; }
+  if(c && c.groups){ CFG=Object.assign(seedCfg(),c); CFG.ui=Object.assign(seedCfg().ui,c.ui||{});
+    if(!c.migPais){ // 11/2026: custos financeiros e investimentos passam para "Despesas financeiras"
+      for(const g of CFG.groups) if((g.id==='g_inv'||g.id==='g_fin') && g.tipo==='despesa') g.tipo='financeiro';
+      CFG.migPais=1; await saveCfg();
+    }
+    return; }
   // primeira abertura: aproveita o que já existia no planejamento antigo (mesmo navegador)
   CFG=seedCfg();
   const oldCat=await stGet('dre_catmap'), oldMan=await stGet('dre_manual'), oldRe=await stGet('dre_reclass');
@@ -723,7 +739,15 @@ function buildBuckets(){
   BUCKET={}; for(const g of CFG.groups) BUCKET[g.id]=[]; BUCKET._none=[];
   for(const c of allCats()) BUCKET[groupOfCat(c)].push(c);
 }
-const orderedGroups = () => { const l=[...CFG.groups]; if((BUCKET._none||[]).some(c=>catHasData(c))) l.push(NONE_G); return l; };
+const orderedGroups = () => { const l=[...CFG.groups]; if((BUCKET._none||[]).some(c=>catHasData(c))) l.push(NONE_G);
+  return l.map((g,i)=>({g,i})).sort((a,b)=>TIPO_ORD.indexOf(tipoDe(a.g))-TIPO_ORD.indexOf(tipoDe(b.g))||a.i-b.i).map(x=>x.g); };
+const groupsDoPai = (tp,gs) => (gs||orderedGroups()).filter(g=>tipoDe(g)===tp);
+function aggP(tp,mk,gs){ let r=0,p=0,t=0; for(const g of groupsDoPai(tp,gs)){ const a=aggG(g.id,mk); r+=a.r; p+=a.p; t+=a.t; } return {r,p,t}; }
+function orcP(tp,mk,gs){ let s=0,n=0; for(const g of groupsDoPai(tp,gs)){ if(g.virtual) continue; const o=orcado(g,mk); if(o!=null){ s+=o; n++; } } return n?s:null; }
+const nGr = (tp,gs) => { const n=groupsDoPai(tp,gs).length; return n+(n===1?' grupo':' grupos'); };
+const parCollapsed = tp => !!(CFG.ui.collapsedP||{})[tp];
+const parHead = (tp,inner) => `<tr class="par t-${tp}" data-par="${tp}">${inner}</tr>`;
+const parName = tp => `<span class="arrow" style="${parCollapsed(tp)?'':'transform:rotate(90deg)'}">▶</span>${E(TIPOS[tp])}`;
 function catHasData(cat, mks){
   if(VC[cat]) return true;
   const cm=M.cat[cat]; if(!cm) return false;
@@ -820,11 +844,13 @@ function custoRatio(mk){ let m=mk; for(let i=0;i<14;i++){ const v=STATE.vendas[m
 function custoAjuste(mk){ if(isPast(mk)) return 0; const est=fatBase(mk)*custoRatio(mk); return Math.max(0, est-((STATE.custosProd||{})[mk]||0)); }
 function resumoMes(mk){
   const v=STATE.vendas[mk]||{r:0,p:0}; const base=fatBase(mk); const aj=custoAjuste(mk);
-  const acc={receita:{r:0,t:0},deducao:{r:0,t:0},despesa:{r:0,t:0},fora:{r:0,t:0}};
-  for(const g of [...CFG.groups,NONE_G]){ const a=aggG(g.id,mk); acc[g.tipo].r+=a.r; acc[g.tipo].t+=a.t; }
+  const acc={receita:{r:0,t:0},deducao:{r:0,t:0},despesa:{r:0,t:0},financeiro:{r:0,t:0},fora:{r:0,t:0}};
+  for(const g of [...CFG.groups,NONE_G]){ const a=aggG(g.id,mk); const tp=tipoDe(g); acc[tp].r+=a.r; acc[tp].t+=a.t; }
   const margem={r:v.r+acc.receita.r-acc.deducao.r, t:base+acc.receita.t-acc.deducao.t-aj};
-  const res={r:margem.r-acc.despesa.r, t:margem.t-acc.despesa.t};
-  return {v,base,acc,margem,res,aj};
+  const oper={r:margem.r-acc.despesa.r, t:margem.t-acc.despesa.t};
+  const res={r:oper.r-acc.financeiro.r, t:oper.t-acc.financeiro.t};
+  const desp={r:acc.despesa.r+acc.financeiro.r, t:acc.despesa.t+acc.financeiro.t};
+  return {v,base,acc,margem,oper,res,desp,aj};
 }
 function renderKPIs(){
   const mk=ST.focus, rs=resumoMes(mk);
@@ -834,7 +860,7 @@ function renderKPIs(){
   const pv=resumoMes(prevMk(mk)); const hasPv=STATE.meses.includes(prevMk(mk));
   document.getElementById('kpis').innerHTML=
     k('Faturamento base · '+mLabel(mk),'R$ '+nf(rs.base),(isPast(mk)?'realizado do mês':'meta do mês (ou realizado, se maior)')+(hasPv?chip(rs.base,pv.base,true):''))+
-    k('Despesas do mês','R$ '+nf(rs.acc.despesa.t), (rs.base?pc1(rs.acc.despesa.t/rs.base)+' do faturamento':'')+(hasPv?chip(rs.acc.despesa.t,pv.acc.despesa.t,false):''))+
+    k('Custos fixos + despesas financeiras','R$ '+nf(rs.desp.t), (rs.base?pc1(rs.desp.t/rs.base)+' do faturamento':'')+' · fixos R$ '+kM(rs.acc.despesa.t)+' · financeiras R$ '+kM(rs.acc.financeiro.t)+(hasPv?chip(rs.desp.t,pv.desp.t,false):''))+
     k('Resultado projetado','R$ '+nf(rs.res.t), (rs.base?pc1(rs.res.t/rs.base)+' do faturamento':'')+(rs.aj>0?' · custo dos produtos estimado':'')+(hasPv?chip(rs.res.t,pv.res.t,true):''), rs.res.t<0?'bad':'good')+
     k('Grupos com orçamento', orcTot?('R$ '+kM(gastoTot)+' de R$ '+kM(orcTot)):'—', estourados.length?('Estourados: '+estourados.join(', ')):(orcTot?'nenhum estourado':'defina em “Grupos e orçamentos”'), estourados.length?'bad':'');
 }
@@ -899,7 +925,12 @@ function renderMes(){
   const mk=ST.focus, pk=prevMk(mk), base=fatBase(mk); const hp=mkOrd(pk)>='202601';
   const gs=orderedGroups();
   let h=`<table><thead><tr><th class="catcol">${mLong(mk)} — orçado × realizado${isPast(mk)?'':'<div style="font-size:11px;font-weight:400;color:var(--mut)">mês em andamento: compara só o que já foi lançado até agora</div>'}</th><th>Orçado</th><th>Realizado</th><th class="prev">Previsto</th><th>Total</th><th>% s/ fat.</th><th>% do orçado</th><th>Saldo</th><th>${hp?mLabel(pk):'mês ant.'}</th><th>Δ R$</th><th>Δ %</th></tr></thead><tbody>`;
+  let curP=null;
   for(const g of gs){
+    const tp=tipoDe(g);
+    if(tp!==curP){ curP=tp; const pa=aggP(tp,mk,gs), pp=hp?aggP(tp,pk,gs):{t:null}, po=orcP(tp,mk,gs); const pc=po?pa.t/po:null; const pov=po!=null&&pa.t>po+0.5;
+      h+=parHead(tp,`<td class="catcol">${parName(tp)}<span class="tag">${nGr(tp,gs)}</span></td><td class="num">${po!=null?nf(po):''}</td><td class="num">${mny(pa.r)}</td><td class="num prev">${mny(pa.p)}</td><td class="num">${mny(pa.t,'0')}</td><td class="num">${base?pc1(pa.t/base):'—'}</td><td class="num">${pc!=null?pc1(pc):''}</td><td class="num">${po!=null?(po-pa.t>0?'+':'')+nf(po-pa.t):''}</td><td class="num">${mny(pp.t)}</td>${dcell(pa.t,pp.t,goodUp(tp),mk)}`); }
+    if(parCollapsed(tp)) continue;
     const up=goodUp(g.tipo); const a=aggG(g.id,mk), pa=hp?aggG(g.id,pk):{t:null};
     const oi=orcInfo(g,mk); const o=oi?oi.v:null;
     const collapsed=!!CFG.ui.collapsed[g.id];
@@ -934,15 +965,17 @@ function renderMes(){
   }
   // resumo
   const rs=resumoMes(mk);
-  const pr=hp?resumoMes(pk):{base:null,acc:{receita:{t:null},deducao:{t:null},despesa:{t:null},fora:{t:null}},margem:{t:null},res:{t:null},aj:null};
+  const pr=hp?resumoMes(pk):{base:null,acc:{receita:{t:null},deducao:{t:null},despesa:{t:null},financeiro:{t:null},fora:{t:null}},margem:{t:null},oper:{t:null},res:{t:null},aj:null};
   const sumRow=(label,r,t,pt,up,cls='',pctv=true)=>`<tr class="sum ${cls}"><td class="catcol">${label}</td><td></td><td class="num">${r==null?'':mny(r,'0')}</td><td class="num prev"></td><td class="num">${mny(t,'0')}</td><td class="num">${pctv&&rs.base?pc1(t/rs.base):''}</td><td></td><td></td><td class="num" style="opacity:.75">${mny(pt)}</td>${dcell(t,pt,up)}</tr>`;
-  h+=`<tr class="sumhead"><td class="catcol">Resultado do mês (grupos por tipo)</td><td colspan="10"></td></tr>`;
+  h+=`<tr class="sumhead"><td class="catcol">Resultado do mês (por categoria pai)</td><td colspan="10"></td></tr>`;
   h+=sumRow('Faturamento (base)',rs.v.r,rs.base,pr.base,true,'',false);
   h+=sumRow('(+) Receitas complementares',rs.acc.receita.r,rs.acc.receita.t,pr.acc.receita.t,true);
-  h+=sumRow('(−) Deduções da venda',rs.acc.deducao.r,rs.acc.deducao.t,pr.acc.deducao.t,false);
+  h+=sumRow('(−) Deduções de vendas',rs.acc.deducao.r,rs.acc.deducao.t,pr.acc.deducao.t,false);
   if(rs.aj>0) h+=sumRow('(−) Custo dos produtos a incorrer <span class="tag">estimativa</span>',null,rs.aj,pr.aj,false);
   h+=sumRow('= Margem',rs.margem.r,rs.margem.t,pr.margem.t,true,'big');
-  h+=sumRow('(−) Despesas',rs.acc.despesa.r,rs.acc.despesa.t,pr.acc.despesa.t,false);
+  h+=sumRow('(−) Custos fixos',rs.acc.despesa.r,rs.acc.despesa.t,pr.acc.despesa.t,false);
+  h+=sumRow('= Resultado operacional',rs.oper.r,rs.oper.t,pr.oper.t,true,'big');
+  h+=sumRow('(−) Despesas financeiras',rs.acc.financeiro.r,rs.acc.financeiro.t,pr.acc.financeiro.t,false);
   h+=sumRow('= Resultado (projetado)',rs.res.r,rs.res.t,pr.res.t,true,'res');
   h+=sumRow('(i) Fora do resultado (ex.: fornecedores)',rs.acc.fora.r,rs.acc.fora.t,pr.acc.fora.t,null);
   h+=`</tbody></table>`;
@@ -985,7 +1018,18 @@ function renderComp(){
     else s+=`<td class="num"><b>${mny(sum,'0')}</b></td><td class="num mut">${n?mny(sum/n):''}</td>`;
     return s;
   };
+  const parCells=(tp)=>{ let s='',sum=0,n=0,sb=0,stt=0; const up=goodUp(tp);
+    const val=mk=>{ const a=aggP(tp,mk,gs); switch(kind){ case 'r': return a.r; case 'p': return a.p; case 'pct': { const b=fatBase(mk); return b?a.t/b:null; } case 'orc': return orcP(tp,mk,gs); case 'saldo': { const o=orcP(tp,mk,gs); return o==null?null:o-a.t; } default: return a.t; } };
+    for(const mk of months){ const v=val(mk); const pv=mkOrd(prevMk(mk))>='202601'?val(prevMk(mk)):null;
+      s+=`<td class="num${mk===ST.focus?' focus':''}">${v==null?'':(isPct?pc1(v):mny(v))}${v!=null&&pv!=null&&!(!isPast(mk)&&Math.abs(v)<0.0005)?`<span class="sub">${chip(v,pv,up,isPct)}</span>`:''}</td>`;
+      if(v!=null){ sum+=v; if(Math.abs(v)>0.005) n++; } if(isPct){ stt+=aggP(tp,mk,gs).t; sb+=fatBase(mk); } }
+    s+= isPct ? `<td class="num"><b>${sb?pc1(stt/sb):'—'}</b></td>` : `<td class="num"><b>${mny(sum,'0')}</b></td><td class="num">${n?mny(sum/n):''}</td>`;
+    return s; };
+  let curP=null;
   for(const g of gs){
+    const tp=tipoDe(g);
+    if(tp!==curP){ curP=tp; h+=parHead(tp,`<td class="catcol">${parName(tp)}<span class="tag">${nGr(tp,gs)}</span></td>${parCells(tp)}`); }
+    if(parCollapsed(tp)) continue;
     const up=goodUp(g.tipo); const collapsed=!!CFG.ui.collapsed[g.id]; const oi=orcInfo(g,months[0]||CUR);
     const tagOrc = g.virtual ? '' : `<span class="tag orc" data-gedit="${g.id}">${(g.orc&&g.orc.modo!=='none')?(g.orc.modo==='pct'?fmt1.format(pnum(g.orc.base))+'% do fat.':'R$ '+nf(pnum(g.orc.base))+' fixo'):'definir orçamento'}</span>`;
     h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}</td>${cellsFor(g,null,up,'g:'+g.id)}</tr>`;
@@ -1025,7 +1069,7 @@ function renderComp(){
   }
   if(kind==='tot'){
     h+=`<tr class="sumhead"><td class="catcol">Resultado por mês</td><td colspan="${months.length+2}"></td></tr>`;
-    const rows=[['Faturamento (base)',rs=>rs.base,true],['Despesas',rs=>rs.acc.despesa.t,false],['Resultado projetado',rs=>rs.res.t,true,'res'],['Resultado % do faturamento',rs=>rs.base?rs.res.t/rs.base:null,true,'pct']];
+    const rows=[['Faturamento (base)',rs=>rs.base,true],['Custos fixos',rs=>rs.acc.despesa.t,false],['Despesas financeiras',rs=>rs.acc.financeiro.t,false],['Resultado projetado',rs=>rs.res.t,true,'res'],['Resultado % do faturamento',rs=>rs.base?rs.res.t/rs.base:null,true,'pct']];
     for(const [lab,fn,upv,cls] of rows){
       let s='',sum=0;
       for(const mk of months){ const rs=resumoMes(mk); const v=fn(rs); const hpm=mkOrd(prevMk(mk))>='202601'; const pv=hpm?fn(resumoMes(prevMk(mk))):null;
@@ -1064,7 +1108,13 @@ function renderTri(){
   for(const mk of months) h+=`<th class="ms">Orçado</th><th>Realizado</th><th class="prev">Previsto</th><th>Total</th><th>% orç.</th>`;
   h+=`</tr></thead><tbody>`;
   const chipT=(i,v,up,get)=>{ if(!i) return ''; const pv=get(months[i-1]); return `<span class="sub">${chip(v,pv,up)}</span>`; };
+  let curP=null;
   for(const g of gs){
+    const tp=tipoDe(g);
+    if(tp!==curP){ curP=tp; let s=''; months.forEach((mk,i)=>{ const a=aggP(tp,mk,gs), o=orcP(tp,mk,gs); const c=o?a.t/o:null;
+        s+=`<td class="num ms">${o!=null?nf(o):''}</td><td class="num">${mny(a.r)}</td><td class="num prev">${mny(a.p)}</td><td class="num"><b>${mny(a.t,'0')}</b>${i?`<span class="sub">${chip(a.t,aggP(tp,months[i-1],gs).t,goodUp(tp))}</span>`:''}</td><td class="num">${c!=null?pc1(c):''}</td>`; });
+      h+=parHead(tp,`<td class="catcol">${parName(tp)}<span class="tag">${nGr(tp,gs)}</span></td>${s}`); }
+    if(parCollapsed(tp)) continue;
     const up=goodUp(g.tipo); const collapsed=!!CFG.ui.collapsed[g.id];
     const tagOrc = g.virtual ? '' : `<span class="tag orc" data-gedit="${g.id}" title="Editar orçamento do grupo">${(g.orc&&g.orc.modo!=='none')?(g.orc.modo==='pct'?'% do fat.':'R$ fixo'):'definir orçamento'}</span>`;
     h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}${months.map(m=>obsOf(g,m)?`<div class="gobs">📝 ${mLabel(m)}: ${E(obsOf(g,m))}</div>`:'').join('')}</td>`;
@@ -1111,8 +1161,8 @@ function renderTri(){
   /* resumo por mês */
   const R=months.map(mk=>resumoMes(mk));
   h+=`<tr class="sumhead"><td class="catcol">Resultado por mês</td><td colspan="${months.length*W}"></td></tr>`;
-  const rows=[['Faturamento (base)',r=>r.v.r,r=>r.base,true,''],['(+) Receitas complementares',r=>r.acc.receita.r,r=>r.acc.receita.t,true,''],['(−) Deduções da venda',r=>r.acc.deducao.r,r=>r.acc.deducao.t,false,''],
-    ['(−) Custo dos produtos a incorrer (estimativa)',r=>null,r=>r.aj,false,'aj'],['= Margem',r=>r.margem.r,r=>r.margem.t,true,'big'],['(−) Despesas',r=>r.acc.despesa.r,r=>r.acc.despesa.t,false,''],['= Resultado (projetado)',r=>r.res.r,r=>r.res.t,true,'res']];
+  const rows=[['Faturamento (base)',r=>r.v.r,r=>r.base,true,''],['(+) Receitas complementares',r=>r.acc.receita.r,r=>r.acc.receita.t,true,''],['(−) Deduções de vendas',r=>r.acc.deducao.r,r=>r.acc.deducao.t,false,''],
+    ['(−) Custo dos produtos a incorrer (estimativa)',r=>null,r=>r.aj,false,'aj'],['= Margem',r=>r.margem.r,r=>r.margem.t,true,'big'],['(−) Custos fixos',r=>r.acc.despesa.r,r=>r.acc.despesa.t,false,''],['= Resultado operacional',r=>r.oper.r,r=>r.oper.t,true,'big'],['(−) Despesas financeiras',r=>r.acc.financeiro.r,r=>r.acc.financeiro.t,false,''],['= Resultado (projetado)',r=>r.res.r,r=>r.res.t,true,'res']];
   for(const [lab,fr,ft,up,cls] of rows){
     if(cls==='aj' && !R.some(r=>r.aj>0)) continue;
     h+=`<tr class="sum ${cls==='res'||cls==='big'?cls:''}"><td class="catcol">${lab}</td>`;
@@ -1156,8 +1206,8 @@ function renderGeral(){
   let segs=[];
   if(D>0){
     let di=0, si=0;
-    for(const g of gs){ if(g.tipo!=='deducao'&&g.tipo!=='despesa') continue; const a=aggG(g.id,mk); if(a.t<=0.5) continue;
-      segs.push({nm:g.nome.replace(' — classificar',''),v:a.t,tipo:g.tipo}); }
+    for(const g of gs){ const tp=tipoDe(g); if(tp!=='deducao'&&tp!=='despesa'&&tp!=='financeiro') continue; const a=aggG(g.id,mk); if(a.t<=0.5) continue;
+      segs.push({nm:g.nome.replace(' — classificar',''),v:a.t,tipo:tp==='deducao'?'deducao':'despesa'}); }
     if(rs.aj>0.5) segs.push({nm:'Custo dos produtos (estimado)',v:rs.aj,tipo:'deducao'});
     segs.sort((a,b)=>(a.tipo===b.tipo?0:(a.tipo==='deducao'?-1:1))||b.v-a.v);
     let ded=0,des=0; for(const x of segs){ x.c = x.tipo==='deducao' ? PAL_DED[Math.min(ded++,PAL_DED.length-1)] : PAL_DES[Math.min(des++,PAL_DES.length-1)]; }
@@ -1175,7 +1225,7 @@ function renderGeral(){
   const estour=orcG.filter(x=>x.pct>1.0005), perto=orcG.filter(x=>x.pct>=.85&&x.pct<=1.0005);
   const none=(BUCKET._none||[]).filter(c=>catHasData(c));
   let venN=0, venV=0; for(const id in M.byId){ const l=M.byId[id]; if(l.ecomp===mk && l.sit!=='pago' && l.venc && l.venc<TODAY){ venN++; venV+=l.p; } }
-  const deltas=[]; if(STATE.meses.includes(pmk)) for(const g of gs){ if(g.tipo!=='despesa'&&g.tipo!=='deducao') continue; const a=aggG(g.id,mk).t, b=aggG(g.id,pmk).t; if(Math.abs(a-b)>=1&&Math.max(a,b)>0) deltas.push({g,a,b,d:a-b}); }
+  const deltas=[]; if(STATE.meses.includes(pmk)) for(const g of gs){ const tp=tipoDe(g); if(tp!=='despesa'&&tp!=='deducao'&&tp!=='financeiro') continue; const a=aggG(g.id,mk).t, b=aggG(g.id,pmk).t; if(Math.abs(a-b)>=1&&Math.max(a,b)>0) deltas.push({g,a,b,d:a-b}); }
   deltas.sort((x,y)=>y.d-x.d);
   const alta=deltas[0]&&deltas[0].d>0?deltas[0]:null, queda=deltas.length&&deltas[deltas.length-1].d<0?deltas[deltas.length-1]:null;
   const ac=(cls,n,t,d,attr='')=>`<div class="acard ${cls}${attr?' clk':''}" ${attr}><div class="n${String(n).length>3?' sm':''}">${n}</div><div><div class="t">${t}</div><div class="d">${d}</div></div></div>`;
@@ -1323,7 +1373,7 @@ function openGroupEditor(gid, focusMk){
   const ms=monthsOf(yr); const o=g.orc||{modo:'none',base:0,meses:{}};
   modal(`<h3>Grupo de orçamento</h3>
     <div class="fr"><label>Nome</label><input type="text" id="geNome" value="${E(g.nome)}" style="min-width:300px"></div>
-    <div class="fr"><label>Tipo</label><select id="geTipo">${Object.keys(TIPOS).map(t=>`<option value="${t}"${t===g.tipo?' selected':''}>${TIPOS[t]}</option>`).join('')}</select>
+    <div class="fr"><label>Categoria pai</label><select id="geTipo">${Object.keys(TIPOS).map(t=>`<option value="${t}"${t===g.tipo?' selected':''}>${TIPOS[t]}</option>`).join('')}</select>
       <span style="color:var(--mut);font-size:12px">define se soma ou subtrai no resultado</span></div>
     <h4>Orçamento</h4>
     <div class="fr"><label>Tratar como</label><select id="geModo"><option value="none"${o.modo==='none'?' selected':''}>sem orçamento</option><option value="valor"${o.modo==='valor'?' selected':''}>valor em R$</option><option value="pct"${o.modo==='pct'?' selected':''}>% sobre o faturamento</option></select>
@@ -1366,8 +1416,8 @@ function openConfig(){
   const cats=allCats().filter(c=>catHasData(c)||VC[c]||CFG.catGroup[c]).sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const mv=Object.keys(CFG.lineMoves||{});
   modal(`<h3>Grupos de orçamento</h3>
-    <table><thead><tr><th style="text-align:left">Grupo</th><th style="text-align:left">Tipo</th><th style="text-align:left">Orçamento</th><th></th></tr></thead><tbody>
-    ${CFG.groups.map((g,i)=>`<tr><td>${E(g.nome)} <span class="tag">${(BUCKET[g.id]||[]).length} cat.</span></td><td>${TIPOS[g.tipo]}</td><td>${g.orc&&g.orc.modo!=='none'?(g.orc.modo==='pct'?fmt1.format(pnum(g.orc.base))+'% do fat.':'R$ '+fmt0.format(pnum(g.orc.base))):'—'}</td>
+    <table><thead><tr><th style="text-align:left">Grupo</th><th style="text-align:left">Categoria pai</th><th style="text-align:left">Orçamento</th><th></th></tr></thead><tbody>
+    ${CFG.groups.map((g,i)=>`<tr><td>${E(g.nome)} <span class="tag">${(BUCKET[g.id]||[]).length} cat.</span></td><td><select data-gtipo="${g.id}">${Object.keys(TIPOS).map(t=>`<option value="${t}"${t===tipoDe(g)?' selected':''}>${TIPOS[t]}</option>`).join('')}</select></td><td>${g.orc&&g.orc.modo!=='none'?(g.orc.modo==='pct'?fmt1.format(pnum(g.orc.base))+'% do fat.':'R$ '+fmt0.format(pnum(g.orc.base))):'—'}</td>
       <td style="white-space:nowrap"><button class="ghost" data-gup="${i}">↑</button><button class="ghost" data-gdn="${i}">↓</button><button data-gedit2="${g.id}">Editar</button></td></tr>`).join('')}
     </tbody></table><div class="acts" style="justify-content:flex-start"><button id="cfgAdd">+ Novo grupo</button></div>
     <h4>Categoria → grupo</h4>
@@ -1385,6 +1435,7 @@ function openConfig(){
   M2.querySelectorAll('[data-gup]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.gup; if(i>0){ [CFG.groups[i-1],CFG.groups[i]]=[CFG.groups[i],CFG.groups[i-1]]; saveCfg(); render(); openConfig(); } });
   M2.querySelectorAll('[data-gdn]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.gdn; if(i<CFG.groups.length-1){ [CFG.groups[i+1],CFG.groups[i]]=[CFG.groups[i],CFG.groups[i+1]]; saveCfg(); render(); openConfig(); } });
   M2.querySelectorAll('[data-gedit2]').forEach(b=>b.onclick=()=>openGroupEditor(b.dataset.gedit2));
+  M2.querySelectorAll('[data-gtipo]').forEach(sel=>sel.onchange=async()=>{ const g=CFG.groups.find(x=>x.id===sel.dataset.gtipo); if(!g) return; g.tipo=sel.value; await saveCfg(); render(); });
   M2.querySelector('#cfgAdd').onclick=()=>{ const nome=prompt('Nome do novo grupo de orçamento:'); if(!nome) return; const id='g_'+Date.now().toString(36); CFG.groups.push({id,nome:nome.trim(),tipo:'despesa',orc:{modo:'none',base:0,meses:{}}}); saveCfg(); render(); openGroupEditor(id); };
   M2.querySelectorAll('[data-cg]').forEach(s=>s.onchange=()=>{ if(s.value) CFG.catGroup[s.dataset.cg]=s.value; else delete CFG.catGroup[s.dataset.cg]; saveCfg(); render(); });
   M2.querySelectorAll('[data-unmv]').forEach(b=>b.onclick=()=>{ delete CFG.lineMoves[b.dataset.unmv]; saveCfg(); render(); openConfig(); });
@@ -1436,6 +1487,7 @@ app.addEventListener('click',e=>{
     else if(k==='c'){ if(VC[key]) return; openDrawer({title:key,cats:[key],mk}); }
     else if(k==='n'){ const [cat,nome]=key.split('\u0001'); openDrawer({title:nome+' · '+cat,cats:[cat],mk,nome}); }
     return; }
+  const pr=e.target.closest('tr.par'); if(pr){ const tp=pr.dataset.par; CFG.ui.collapsedP=CFG.ui.collapsedP||{}; CFG.ui.collapsedP[tp]=!CFG.ui.collapsedP[tp]; saveCfg(); render(); return; }
   const gr=e.target.closest('tr.grp'); if(gr){ const id=gr.dataset.gid; CFG.ui.collapsed[id]=!CFG.ui.collapsed[id]; saveCfg(); render(); return; }
   const ln=e.target.closest('tr.line'); if(ln){ const id=ln.dataset.lid; if(ST.openLines.has(id)) ST.openLines.delete(id); else ST.openLines.add(id); render(); return; }
   const ct=e.target.closest('tr.cat'); if(ct){ const c=ct.dataset.cat; if(VC[c]&&VC[c].manual&&ST.view==='mes') return; if(ST.openCats.has(c)) ST.openCats.delete(c); else ST.openCats.add(c); render(); return; }
