@@ -268,6 +268,14 @@
   .tri thead tr.vrow th b{color:var(--ink); font-weight:900; font-variant-numeric:tabular-nums;}
   .tri thead tr.vrow .vsep{margin:0 7px; color:var(--line2);} .tri thead tr.vrow .vl{font-size:11px;}
   .tri thead tr.vrow b.vpc.g{color:var(--good);} .tri thead tr.vrow b.vpc.r{color:var(--od);}
+  .tri thead tr.vrow th{background:#1A1F2E!important; color:rgba(255,255,255,.72); border-color:#1A1F2E;}
+  .tri thead tr.vrow th b{color:#fff;} .tri thead tr.vrow .vsep{color:rgba(255,255,255,.3);}
+  .tri thead tr.vrow b.vpc.g{color:#4ADE80;} .tri thead tr.vrow b.vpc.r{color:#F87171;}
+  tr.vend td{background:#1A1F2E!important; color:#fff; font-weight:800; border-top:2px solid #1A1F2E;}
+  tr.vend td.catcol{border-left:5px solid var(--good); text-transform:uppercase; letter-spacing:.5px; font-weight:900;}
+  tr.vend td.prev{color:rgba(255,255,255,.75);} tr.vend .arrow{color:#fff;}
+  tr.vend .tag{background:rgba(255,255,255,.14); color:#fff; border-color:transparent;}
+  tr.par .pv{display:block; font-size:10.5px; font-weight:700; line-height:1.2; margin-top:2px; color:#FCD34D; text-transform:none; letter-spacing:0;}
   .tri thead tr.sub2 th{top:62px;}
   .tri .num .sub{margin-top:1px;}
   .filters .f select.sel.tsel{min-width:112px;}
@@ -745,6 +753,11 @@ const groupsDoPai = (tp,gs) => (gs||orderedGroups()).filter(g=>tipoDe(g)===tp);
 function aggP(tp,mk,gs){ let r=0,p=0,t=0; for(const g of groupsDoPai(tp,gs)){ const a=aggG(g.id,mk); r+=a.r; p+=a.p; t+=a.t; } return {r,p,t}; }
 function orcP(tp,mk,gs){ let s=0,n=0; for(const g of groupsDoPai(tp,gs)){ if(g.virtual) continue; const o=orcado(g,mk); if(o!=null){ s+=o; n++; } } return n?s:null; }
 const nGr = (tp,gs) => { const n=groupsDoPai(tp,gs).length; return n+(n===1?' grupo':' grupos'); };
+const pvR = (v,mk) => { const b=fatR(mk); return b&&v?`<span class="pv" title="sobre a venda realizada do mês">${pc1(v/b)} da venda real.</span>`:''; };
+const pvP = (v,mk) => { const b=metaV(mk); return b&&v?`<span class="pv" title="sobre a venda prevista (meta) do mês">${pc1(v/b)} da venda prev.</span>`:''; };
+// Receitas complementares e Deduções de vendas: com um grupo só, a categoria pai abre direto nas categorias (sem repetir o nome)
+const flatG = (tp,gs) => (tp==='receita'||tp==='deducao') && groupsDoPai(tp,gs).length===1;
+const parTag = (tp,gs) => { if(flatG(tp,gs)){ const g=groupsDoPai(tp,gs)[0]; return g.virtual?'':`<span class="tag orc" data-gedit="${g.id}" title="Editar orçamento">${(g.orc&&g.orc.modo!=='none')?(g.orc.modo==='pct'?'% do fat.':'R$ fixo'):'definir orçamento'}</span>`; } return `<span class="tag">${nGr(tp,gs)}</span>`; };
 const parCollapsed = tp => !!(CFG.ui.collapsedP||{})[tp];
 const parHead = (tp,inner) => `<tr class="par t-${tp}" data-par="${tp}">${inner}</tr>`;
 const parName = tp => `<span class="arrow" style="${parCollapsed(tp)?'':'transform:rotate(90deg)'}">▶</span>${E(TIPOS[tp])}`;
@@ -820,7 +833,7 @@ function renderVendas(){
     for(const mk of months){ const v=get(mk)||{r:0,p:0}; tr+=v.r; tp+=v.p; const f=mk===ST.focus?' focus':'';
       s+=`<td class="num${f}">${mny(v.r)}</td><td class="num prev${f}">${mny(v.p)}</td>`; }
     return s+`<td class="num"><b>${mny(tr,'0')}</b></td><td class="num prev"><b>${mny(tp,'0')}</b></td>`; };
-  h+=`<tr class="cat${ST.openVendas?' open':''}" data-vendas="1"><td class="catcol" style="padding-left:12px"><span class="arrow">▶</span>Vendas<span class="tag auto">AUTOMÁTICO</span></td>${pair(mk=>STATE.vendas[mk])}</tr>`;
+  h+=`<tr class="cat vend${ST.openVendas?' open':''}" data-vendas="1"><td class="catcol" style="padding-left:12px"><span class="arrow">▶</span>Vendas<span class="tag auto">AUTOMÁTICO</span></td>${pair(mk=>STATE.vendas[mk])}</tr>`;
   if(ST.openVendas){
     const list=Object.keys(vc).map(cn=>{ let t=0; for(const mk of months){ const v=vc[cn][mk]; if(v) t+=Math.abs(v.r)+Math.abs(v.p); } return {cn,t}; }).filter(x=>x.t>0).sort((a,b)=>b.t-a.t);
     for(const {cn} of list) h+=`<tr class="con"><td class="catcol" style="padding-left:34px">${E(cn)}</td>${pair(mk=>vc[cn][mk])}</tr>`;
@@ -929,8 +942,9 @@ function renderMes(){
   for(const g of gs){
     const tp=tipoDe(g);
     if(tp!==curP){ curP=tp; const pa=aggP(tp,mk,gs), pp=hp?aggP(tp,pk,gs):{t:null}, po=orcP(tp,mk,gs); const pc=po?pa.t/po:null; const pov=po!=null&&pa.t>po+0.5;
-      h+=parHead(tp,`<td class="catcol">${parName(tp)}<span class="tag">${nGr(tp,gs)}</span></td><td class="num">${po!=null?nf(po):''}</td><td class="num">${mny(pa.r)}</td><td class="num prev">${mny(pa.p)}</td><td class="num">${mny(pa.t,'0')}</td><td class="num">${base?pc1(pa.t/base):'—'}</td><td class="num">${pc!=null?pc1(pc):''}</td><td class="num">${po!=null?(po-pa.t>0?'+':'')+nf(po-pa.t):''}</td><td class="num">${mny(pp.t)}</td>${dcell(pa.t,pp.t,goodUp(tp),mk)}`); }
+      h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td><td class="num">${po!=null?nf(po):''}</td><td class="num">${mny(pa.r)}${pvR(pa.r,mk)}</td><td class="num prev">${mny(pa.p)}${pvP(pa.p,mk)}</td><td class="num">${mny(pa.t,'0')}</td><td class="num">${base?pc1(pa.t/base):'—'}</td><td class="num">${pc!=null?pc1(pc):''}</td><td class="num">${po!=null?(po-pa.t>0?'+':'')+nf(po-pa.t):''}</td><td class="num">${mny(pp.t)}</td>${dcell(pa.t,pp.t,goodUp(tp),mk)}`); }
     if(parCollapsed(tp)) continue;
+    const flat=flatG(tp,gs), hLen=h.length;
     const up=goodUp(g.tipo); const a=aggG(g.id,mk), pa=hp?aggG(g.id,pk):{t:null};
     const oi=orcInfo(g,mk); const o=oi?oi.v:null;
     const collapsed=!!CFG.ui.collapsed[g.id];
@@ -942,7 +956,7 @@ function renderMes(){
       <td class="num ${over?'oc-over':''}">${consumo!=null?pc1(consumo)+`<div class="bar ${over?'over':consumo>.9?'warn':''}"><i style="width:${Math.min(100,Math.round(consumo*100))}%"></i></div>`:''}</td>
       <td class="num ${over?'oc-over':(o!=null?'oc-ok':'')}">${o!=null?(o-a.t>0?'+':'')+nf(o-a.t):''}</td>
       <td class="num mut">${mny(pa.t)}</td>${dcell(a.t,pa.t,up,mk)}</tr>`;
-    if(collapsed) continue;
+    if(flat) h=h.slice(0,hLen); else if(collapsed) continue;
     for(const cat of visibleCats(g.id,[mk,pk])){
       const v=catVal(cat,mk); const t=tot(v), pt=hp?tot(catVal(cat,pk)):null;
       const vc=VC[cat]; const open=ST.openCats.has(cat);
@@ -1021,15 +1035,16 @@ function renderComp(){
   const parCells=(tp)=>{ let s='',sum=0,n=0,sb=0,stt=0; const up=goodUp(tp);
     const val=mk=>{ const a=aggP(tp,mk,gs); switch(kind){ case 'r': return a.r; case 'p': return a.p; case 'pct': { const b=fatBase(mk); return b?a.t/b:null; } case 'orc': return orcP(tp,mk,gs); case 'saldo': { const o=orcP(tp,mk,gs); return o==null?null:o-a.t; } default: return a.t; } };
     for(const mk of months){ const v=val(mk); const pv=mkOrd(prevMk(mk))>='202601'?val(prevMk(mk)):null;
-      s+=`<td class="num${mk===ST.focus?' focus':''}">${v==null?'':(isPct?pc1(v):mny(v))}${v!=null&&pv!=null&&!(!isPast(mk)&&Math.abs(v)<0.0005)?`<span class="sub">${chip(v,pv,up,isPct)}</span>`:''}</td>`;
+      s+=`<td class="num${mk===ST.focus?' focus':''}">${v==null?'':(isPct?pc1(v):mny(v))}${kind==='r'?pvR(v,mk):kind==='p'?pvP(v,mk):''}${v!=null&&pv!=null&&!(!isPast(mk)&&Math.abs(v)<0.0005)?`<span class="sub">${chip(v,pv,up,isPct)}</span>`:''}</td>`;
       if(v!=null){ sum+=v; if(Math.abs(v)>0.005) n++; } if(isPct){ stt+=aggP(tp,mk,gs).t; sb+=fatBase(mk); } }
     s+= isPct ? `<td class="num"><b>${sb?pc1(stt/sb):'—'}</b></td>` : `<td class="num"><b>${mny(sum,'0')}</b></td><td class="num">${n?mny(sum/n):''}</td>`;
     return s; };
   let curP=null;
   for(const g of gs){
     const tp=tipoDe(g);
-    if(tp!==curP){ curP=tp; h+=parHead(tp,`<td class="catcol">${parName(tp)}<span class="tag">${nGr(tp,gs)}</span></td>${parCells(tp)}`); }
+    if(tp!==curP){ curP=tp; h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td>${parCells(tp)}`); }
     if(parCollapsed(tp)) continue;
+    const flat=flatG(tp,gs), hLen=h.length;
     const up=goodUp(g.tipo); const collapsed=!!CFG.ui.collapsed[g.id]; const oi=orcInfo(g,months[0]||CUR);
     const tagOrc = g.virtual ? '' : `<span class="tag orc" data-gedit="${g.id}">${(g.orc&&g.orc.modo!=='none')?(g.orc.modo==='pct'?fmt1.format(pnum(g.orc.base))+'% do fat.':'R$ '+nf(pnum(g.orc.base))+' fixo'):'definir orçamento'}</span>`;
     h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}</td>${cellsFor(g,null,up,'g:'+g.id)}</tr>`;
@@ -1038,7 +1053,7 @@ function renderComp(){
       for(const mk of months){ const o=orcado(g,mk); so+=o||0; s+=`<td class="num clk${mk===ST.focus?' focus':''}" data-gedit="${g.id}" data-gmk="${mk}"${obsOf(g,mk)?` title="${E(obsOf(g,mk))}"`:''}>${o!=null?mny(o):''}${obsOf(g,mk)?' 📝':''}</td>`; }
       h+=`<tr class="orcrow"><td class="catcol">orçado do grupo</td>${s}<td class="num">${mny(so,'0')}</td><td></td></tr>`;
     }
-    if(collapsed) continue;
+    if(flat) h=h.slice(0,hLen); else if(collapsed) continue;
     for(const cat of visibleCats(g.id,months)){
       const vc=VC[cat]; const open=ST.openCats.has(cat);
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true"><td class="catcol"><span class="arrow">▶</span>${E(cat)}${vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>${cellsFor(null,cat,up,'c:'+cat)}</tr>`;
@@ -1112,9 +1127,10 @@ function renderTri(){
   for(const g of gs){
     const tp=tipoDe(g);
     if(tp!==curP){ curP=tp; let s=''; months.forEach((mk,i)=>{ const a=aggP(tp,mk,gs), o=orcP(tp,mk,gs); const c=o?a.t/o:null;
-        s+=`<td class="num ms">${o!=null?nf(o):''}</td><td class="num">${mny(a.r)}</td><td class="num prev">${mny(a.p)}</td><td class="num"><b>${mny(a.t,'0')}</b>${i?`<span class="sub">${chip(a.t,aggP(tp,months[i-1],gs).t,goodUp(tp))}</span>`:''}</td><td class="num">${c!=null?pc1(c):''}</td>`; });
-      h+=parHead(tp,`<td class="catcol">${parName(tp)}<span class="tag">${nGr(tp,gs)}</span></td>${s}`); }
+        s+=`<td class="num ms">${o!=null?nf(o):''}</td><td class="num">${mny(a.r)}${pvR(a.r,mk)}</td><td class="num prev">${mny(a.p)}${pvP(a.p,mk)}</td><td class="num"><b>${mny(a.t,'0')}</b>${i?`<span class="sub">${chip(a.t,aggP(tp,months[i-1],gs).t,goodUp(tp))}</span>`:''}</td><td class="num">${c!=null?pc1(c):''}</td>`; });
+      h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td>${s}`); }
     if(parCollapsed(tp)) continue;
+    const flat=flatG(tp,gs), hLen=h.length;
     const up=goodUp(g.tipo); const collapsed=!!CFG.ui.collapsed[g.id];
     const tagOrc = g.virtual ? '' : `<span class="tag orc" data-gedit="${g.id}" title="Editar orçamento do grupo">${(g.orc&&g.orc.modo!=='none')?(g.orc.modo==='pct'?'% do fat.':'R$ fixo'):'definir orçamento'}</span>`;
     h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}${months.map(m=>obsOf(g,m)?`<div class="gobs">📝 ${mLabel(m)}: ${E(obsOf(g,m))}</div>`:'').join('')}</td>`;
@@ -1125,7 +1141,7 @@ function renderTri(){
         <td class="num ${over?'oc-over':''}">${cons!=null?pc1(cons)+`<div class="bar ${over?'over':cons>.9?'warn':''}"><i style="width:${Math.min(100,Math.round(cons*100))}%"></i></div>`:''}</td>`;
     });
     h+=`</tr>`;
-    if(collapsed) continue;
+    if(flat) h=h.slice(0,hLen); else if(collapsed) continue;
     for(const cat of visibleCats(g.id,months)){
       const vc=VC[cat]; const open=ST.openCats.has(cat);
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true"><td class="catcol"><span class="arrow">▶</span>${E(cat)}${vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
