@@ -269,7 +269,7 @@
   .tri thead tr.vrow .vsep{margin:0 7px; color:var(--line2);} .tri thead tr.vrow .vl{font-size:11px;}
   .tri thead tr.vrow b.vpc.g{color:var(--good);} .tri thead tr.vrow b.vpc.r{color:var(--od);}
   .tri thead tr.vrow th{background:#1A1F2E!important; color:rgba(255,255,255,.72); border-color:#1A1F2E;}
-  .tri thead tr.vrow th b{color:#fff;} .tri thead tr.vrow .vsep{color:rgba(255,255,255,.3);}
+  .tri thead tr.vrow th b{color:#fff;} .tri thead tr.vrow th.vlab{color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:.5px; font-size:12px; text-align:left; border-left:5px solid var(--good);} .tri thead tr.vrow .vsep{color:rgba(255,255,255,.3);}
   .tri thead tr.vrow b.vpc.g{color:#4ADE80;} .tri thead tr.vrow b.vpc.r{color:#F87171;}
   tr.vend td{background:#1A1F2E!important; color:#fff; font-weight:800; border-top:2px solid #1A1F2E;}
   tr.vend td.catcol{border-left:5px solid var(--good); text-transform:uppercase; letter-spacing:.5px; font-weight:900;}
@@ -753,8 +753,8 @@ const groupsDoPai = (tp,gs) => (gs||orderedGroups()).filter(g=>tipoDe(g)===tp);
 function aggP(tp,mk,gs){ let r=0,p=0,t=0; for(const g of groupsDoPai(tp,gs)){ const a=aggG(g.id,mk); r+=a.r; p+=a.p; t+=a.t; } return {r,p,t}; }
 function orcP(tp,mk,gs){ let s=0,n=0; for(const g of groupsDoPai(tp,gs)){ if(g.virtual) continue; const o=orcado(g,mk); if(o!=null){ s+=o; n++; } } return n?s:null; }
 const nGr = (tp,gs) => { const n=groupsDoPai(tp,gs).length; return n+(n===1?' grupo':' grupos'); };
-const pvR = (v,mk) => { const b=fatR(mk); return b&&v?`<span class="pv" title="sobre a venda realizada do mês">${pc1(v/b)} da venda real.</span>`:''; };
-const pvP = (v,mk) => { const b=metaV(mk); return b&&v?`<span class="pv" title="sobre a venda prevista (meta) do mês">${pc1(v/b)} da venda prev.</span>`:''; };
+const pvR = (v,mk) => { const b=fatR(mk); return b&&v?`<span class="pv" title="% sobre a venda realizada do mês">${pc1(v/b)}</span>`:''; };
+const pvP = (v,mk) => { const b=metaV(mk); return b&&v?`<span class="pv" title="% sobre a venda prevista (meta) do mês">${pc1(v/b)}</span>`:''; };
 // Receitas complementares e Deduções de vendas: com um grupo só, a categoria pai abre direto nas categorias (sem repetir o nome)
 const flatG = (tp,gs) => (tp==='receita'||tp==='deducao') && groupsDoPai(tp,gs).length===1;
 const parTag = (tp,gs) => { if(flatG(tp,gs)){ const g=groupsDoPai(tp,gs)[0]; return g.virtual?'':`<span class="tag orc" data-gedit="${g.id}" title="Editar orçamento">${(g.orc&&g.orc.modo!=='none')?(g.orc.modo==='pct'?'% do fat.':'R$ fixo'):'definir orçamento'}</span>`; } return `<span class="tag">${nGr(tp,gs)}</span>`; };
@@ -1115,11 +1115,11 @@ function fillTri(){
 function renderTri(){
   const months=[...triMonths()].sort((a,b)=>mkOrd(a).localeCompare(mkOrd(b)));
   const gs=orderedGroups(); const W=5;
-  let h=`<table class="tri"><thead><tr><th class="catcol" rowspan="3">Orçado × realizado · ${months.map(mLabel).join(' · ')}</th>`;
+  let h=`<table class="tri"><thead><tr><th class="catcol">Orçado × realizado · ${months.map(mLabel).join(' · ')}</th>`;
   for(const mk of months) h+=`<th colspan="${W}" class="mh2 ms" data-focus="${mk}" style="cursor:pointer" title="Abrir ${mLong(mk)} detalhado">${mLong(mk)}${isPast(mk)?'':' <span style="font-weight:600;color:var(--mut)">(em andamento)</span>'}</th>`;
-  h+=`</tr><tr class="vrow">`;
-  for(const mk of months){ const mv=metaV(mk); h+=`<th colspan="${W}" class="ms vcell"><span class="vl">Vendas realizadas</span> <b>R$ ${nf(fatR(mk))}</b><span class="vsep">·</span><span class="vl">previstas</span> <b>${mv?'R$ '+nf(mv):'—'}</b>${mv&&fatR(mk)?`<span class="vsep">·</span><b class="vpc ${fatR(mk)>=mv?'g':'r'}">${pc1(fatR(mk)/mv)}</b>`:''}</th>`; }
-  h+=`</tr><tr class="sub2">`;
+  h+=`</tr><tr class="vrow"><th class="catcol vlab">Venda realizada <span class="vsep">·</span> prevista</th>`;
+  for(const mk of months){ const mv=metaV(mk); h+=`<th colspan="${W}" class="ms vcell"><b>R$ ${nf(fatR(mk))}</b><span class="vsep">·</span><b>${mv?'R$ '+nf(mv):'—'}</b>${mv&&fatR(mk)?`<span class="vsep">·</span><b class="vpc ${fatR(mk)>=mv?'g':'r'}">${pc1(fatR(mk)/mv)}</b>`:''}</th>`; }
+  h+=`</tr><tr class="sub2"><th class="catcol"></th>`;
   for(const mk of months) h+=`<th class="ms">Orçado</th><th>Realizado</th><th class="prev">Previsto</th><th>Total</th><th>% orç.</th>`;
   h+=`</tr></thead><tbody>`;
   const chipT=(i,v,up,get)=>{ if(!i) return ''; const pv=get(months[i-1]); return `<span class="sub">${chip(v,pv,up)}</span>`; };
@@ -1569,31 +1569,49 @@ function exportXLSX(){
   // 1) orçamento do mês em foco
   const a1=[['Grupo / Categoria','Orçado','Realizado','Previsto','Total','% s/ faturamento',mLabel(pk)+' (total)','Δ R$','Δ %']];
   const base=fatBase(mk);
-  for(const g of orderedGroups()){
-    const a=aggG(g.id,mk), pa=aggG(g.id,pk), o=g.virtual?null:orcado(g,mk);
-    a1.push([g.nome+' ['+TIPOS[g.tipo]+']', o==null?'':o, a.r, a.p, a.t, base?a.t/base:'', pa.t, a.t-pa.t, pa.t?(a.t-pa.t)/Math.abs(pa.t):'']);
-    for(const c of visibleCats(g.id,[mk,pk])){ const v=catVal(c,mk), pv=catVal(c,pk); a1.push(['   '+c,'',v.r,v.p,tot(v),base?tot(v)/base:'',tot(pv),tot(v)-tot(pv),tot(pv)?(tot(v)-tot(pv))/Math.abs(tot(pv)):'']); }
+  const gsX=orderedGroups(); let curP=null;
+  for(const g of gsX){
+    const tp=tipoDe(g), flat=flatG(tp,gsX);
+    if(tp!==curP){ curP=tp; const a=aggP(tp,mk,gsX), pa=aggP(tp,pk,gsX), o=orcP(tp,mk,gsX);
+      a1.push([TIPOS[tp].toUpperCase(), o==null?'':o, a.r, a.p, a.t, base?a.t/base:'', pa.t, a.t-pa.t, pa.t?(a.t-pa.t)/Math.abs(pa.t):'']); }
+    const ind=flat?'   ':'      ';
+    if(!flat){ const a=aggG(g.id,mk), pa=aggG(g.id,pk), o=g.virtual?null:orcado(g,mk);
+      a1.push(['   '+g.nome, o==null?'':o, a.r, a.p, a.t, base?a.t/base:'', pa.t, a.t-pa.t, pa.t?(a.t-pa.t)/Math.abs(pa.t):'']); }
+    for(const c of visibleCats(g.id,[mk,pk])){ const v=catVal(c,mk), pv=catVal(c,pk); a1.push([ind+c,'',v.r,v.p,tot(v),base?tot(v)/base:'',tot(pv),tot(v)-tot(pv),tot(pv)?(tot(v)-tot(pv))/Math.abs(tot(pv)):'']); }
   }
+  { const rs=resumoMes(mk), pr=resumoMes(pk); const L=(n,c,pc)=>a1.push([n,'','','',c,base?c/base:'',pc,c-pc,pc?(c-pc)/Math.abs(pc):'']);
+    a1.push([]); a1.push(['RESULTADO DO MÊS']);
+    L('Faturamento (base)',rs.base,pr.base); L('(+) Receitas complementares',rs.acc.receita.t,pr.acc.receita.t); L('(−) Deduções de vendas',rs.acc.deducao.t,pr.acc.deducao.t);
+    if(rs.aj||pr.aj) L('(−) Custo dos produtos a incorrer (estimativa)',rs.aj||0,pr.aj||0);
+    L('= Margem',rs.margem.t,pr.margem.t); L('(−) Custos fixos',rs.acc.despesa.t,pr.acc.despesa.t); L('= Resultado operacional',rs.oper.t,pr.oper.t);
+    L('(−) Despesas financeiras',rs.acc.financeiro.t,pr.acc.financeiro.t); L('= Resultado (projetado)',rs.res.t,pr.res.t); L('(i) Fora do resultado',rs.acc.fora.t,pr.acc.fora.t); }
   // 2) comparativo (total por mês)
   const a2=[['Grupo / Categoria',...months.map(mLabel),'Total']];
   const orcLines=[];
-  for(const g of orderedGroups()){
-    const row=[g.nome]; let s=0; for(const m of months){ const t=aggG(g.id,m).t; row.push(t); s+=t; } row.push(s); a2.push(row);
-    if(!g.virtual&&g.orc&&g.orc.modo!=='none'){ const r2_=['   orçado']; let so=0; for(const m of months){ const o=orcado(g,m); r2_.push(o==null?'':o); so+=o||0; } r2_.push(so); a2.push(r2_); }
-    for(const c of visibleCats(g.id,months)){ const r3=['   '+c]; let s3=0; for(const m of months){ const t=tot(catVal(c,m)); r3.push(t); s3+=t; } r3.push(s3); a2.push(r3); }
+  let curP2=null;
+  for(const g of gsX){
+    const tp=tipoDe(g), flat=flatG(tp,gsX), ind=flat?'   ':'      ';
+    if(tp!==curP2){ curP2=tp; const row=[TIPOS[tp].toUpperCase()]; let s=0; for(const m of months){ const t=aggP(tp,m,gsX).t; row.push(t); s+=t; } row.push(s); a2.push(row); }
+    if(!flat){ const row=['   '+g.nome]; let s=0; for(const m of months){ const t=aggG(g.id,m).t; row.push(t); s+=t; } row.push(s); a2.push(row); }
+    if(!g.virtual&&g.orc&&g.orc.modo!=='none'){ const r2_=[ind+'orçado']; let so=0; for(const m of months){ const o=orcado(g,m); r2_.push(o==null?'':o); so+=o||0; } r2_.push(so); a2.push(r2_); }
+    for(const c of visibleCats(g.id,months)){ const r3=[ind+c]; let s3=0; for(const m of months){ const t=tot(catVal(c,m)); r3.push(t); s3+=t; } r3.push(s3); a2.push(r3); }
   }
+  { const add=(n,f)=>{ const r=[n]; let s=0; for(const m of months){ const v=f(resumoMes(m)); r.push(v); s+=v; } r.push(s); a2.push(r); };
+    a2.push([]); a2.push(['RESULTADO']);
+    add('Faturamento (base)',r=>r.base); add('= Margem',r=>r.margem.t); add('(−) Custos fixos',r=>r.acc.despesa.t); add('= Resultado operacional',r=>r.oper.t);
+    add('(−) Despesas financeiras',r=>r.acc.financeiro.t); add('= Resultado (projetado)',r=>r.res.t); }
   // 3) lançamentos
-  const a3=[['Competência','Grupo','Categoria','Contato','Histórico','Documento','Vencimento','Liquidação','Situação','Valor','Multa','Juros','Pago','Em aberto','ID Tiny']];
+  const a3=[['Competência','Categoria pai','Grupo','Categoria','Contato','Histórico','Documento','Vencimento','Liquidação','Situação','Valor','Multa','Juros','Pago','Em aberto','ID Tiny']];
   const ms=new Set(months);
   const items=Object.values(M.byId).filter(l=>ms.has(l.ecomp)).sort((x,y)=>mkOrd(x.ecomp).localeCompare(mkOrd(y.ecomp))||x.ecat.localeCompare(y.ecat,'pt-BR'));
-  for(const l of items){ const g=groupById(groupOfCat(l.ecat)); a3.push([l.ecomp,g?g.nome:'',l.ecat,l.nome,l.hist,l.doc,isoBR(l.venc),isoBR(l.liq),l.sit,l.val,l.mu,l.ju,l.pg,l.p,l.id]); }
+  for(const l of items){ const g=groupById(groupOfCat(l.ecat)); a3.push([l.ecomp,TIPOS[tipoDe(g||NONE_G)],g?g.nome:'',l.ecat,l.nome,l.hist,l.doc,isoBR(l.venc),isoBR(l.liq),l.sit,l.val,l.mu,l.ju,l.pg,l.p,l.id]); }
   const wb=XLSX.utils.book_new();
   const mk_=(aoa,name,cw,pctCols)=>{ const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=cw; const rg=XLSX.utils.decode_range(ws['!ref']);
     for(let R=1;R<=rg.e.r;R++) for(let C=1;C<=rg.e.c;C++){ const ad=XLSX.utils.encode_cell({r:R,c:C}); if(ws[ad]&&typeof ws[ad].v==='number') ws[ad].z=(pctCols||[]).includes(C)?'0.0%':'#,##0.00'; }
     ws['!freeze']={xSplit:1,ySplit:1}; XLSX.utils.book_append_sheet(wb,ws,name); };
   mk_(a1,'Orçamento '+mk.replace('/','-'),[{wch:44},...Array(8).fill({wch:15})],[5,8]);
   mk_(a2,'Comparativo',[{wch:44},...Array(months.length+1).fill({wch:13})]);
-  mk_(a3,'Lançamentos',[{wch:11},{wch:26},{wch:26},{wch:34},{wch:50},{wch:12},{wch:12},{wch:12},{wch:9},...Array(5).fill({wch:13}),{wch:12}]);
+  mk_(a3,'Lançamentos',[{wch:11},{wch:22},{wch:26},{wch:26},{wch:34},{wch:50},{wch:12},{wch:12},{wch:12},{wch:9},...Array(5).fill({wch:13}),{wch:12}]);
   XLSX.writeFile(wb,'orcamento_financeiro_'+(ST.year==='TODOS'?'completo':ST.year)+'.xlsx');
 }
 
