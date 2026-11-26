@@ -512,7 +512,14 @@ async function garantirOurocap(){
   if(mud) await saveCfg();
 }
 async function garantirCatsExtras(){
-  if(!CFG.catGroup['Wellhub']){ CFG.catGroup['Wellhub']='g_pes'; await saveCfg(); }
+  let mud=false;
+  if(!CFG.catGroup['Wellhub']){ CFG.catGroup['Wellhub']='g_pes'; mud=true; }
+  // grupo Pessoal Galpão (usa o que já existir com esse nome)
+  let gp=CFG.groups.find(g=>/pessoal\s*galp/i.test(semAcento(g.nome)));
+  if(!gp){ gp={id:'g_pesg',nome:'Pessoal Galpão',tipo:'despesa',orc:{modo:'none',base:'',meses:{}}};
+    const i=CFG.groups.findIndex(g=>g.id==='g_gal'); if(i<0) CFG.groups.push(gp); else CFG.groups.splice(i+1,0,gp); mud=true; }
+  if(!CFG.catGroup['Salario Funcionarios Galpao']){ CFG.catGroup['Salario Funcionarios Galpao']=gp.id; mud=true; }
+  if(mud) await saveCfg();
 }
 async function loadCfg(){ await loadCfg0(); await garantirCatsExtras(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); await garantirOurocap(); }
 async function loadCfg0(){
@@ -779,7 +786,15 @@ const AUTO_RECLASS = [
   ['wellhub','Wellhub'],
   ['graziele vieira santos','Servicos Gerais'],
   ['alianca do b','Seguro Galpao'],
-  ['facilitymais consultoria','Importacao']
+  ['facilitymais consultoria','Importacao'],
+  // equipe do galpão → Pessoal Galpão / Salario Funcionarios Galpao (salário e 13º)
+  ['salario rodrigo de almeida alcantara','Salario Funcionarios Galpao'],
+  ['salario welton rocha almeida','Salario Funcionarios Galpao'],
+  ['salario caio loureiro kruger','Salario Funcionarios Galpao'],
+  ['salario carlos eduardo almeida da silva','Salario Funcionarios Galpao'],
+  ['salario kevelin ericson dos santos de lima','Salario Funcionarios Galpao'],
+  ['salario kennedy eric','Salario Funcionarios Galpao'],
+  ['salario washington jose de oliveira junior','Salario Funcionarios Galpao']
 ];
 /* ══════════ MODELO (agregações) ══════════ */
 let M={cat:{},con:{},lines:{},catsData:new Set(),byId:{}};
@@ -1462,7 +1477,7 @@ function modal(html){ const m=document.getElementById('modal'); m.innerHTML=html
 function closeModal(){ document.getElementById('modal').classList.remove('on'); if(!DR) document.getElementById('veil').classList.remove('on'); }
 function openMove(id){
   const l=M.byId[id]; if(!l) return;
-  const cats=[...new Set([...M.catsData,'Distribuição de lucros','Ourocap'])].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const cats=[...new Set([...M.catsData,'Distribuição de lucros','Ourocap','Salario Funcionarios Galpao'])].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const ms=STATE.meses;
   modal(`<h3>Mover lançamento</h3><div style="color:var(--mut);font-size:13px;margin-bottom:8px">${E(l.nome)} — ${E(short(l.hist,100))}<br>Valor ${fmt2.format(l.val)} · original: ${E(l.cat)} · ${l.comp}</div>
     <div class="fr"><label>Categoria</label><select id="mvCat">${cats.map(c=>`<option${c===l.ecat?' selected':''}>${E(c)}</option>`).join('')}</select></div>
