@@ -514,11 +514,14 @@ async function garantirOurocap(){
 async function garantirCatsExtras(){
   let mud=false;
   if(!CFG.catGroup['Wellhub']){ CFG.catGroup['Wellhub']='g_pes'; mud=true; }
-  // grupo Pessoal Galpão (usa o que já existir com esse nome)
-  let gp=CFG.groups.find(g=>/pessoal\s*galp/i.test(semAcento(g.nome)));
-  if(!gp){ gp={id:'g_pesg',nome:'Pessoal Galpão',tipo:'despesa',orc:{modo:'none',base:'',meses:{}}};
-    const i=CFG.groups.findIndex(g=>g.id==='g_gal'); if(i<0) CFG.groups.push(gp); else CFG.groups.splice(i+1,0,gp); mud=true; }
-  if(!CFG.catGroup['Salario Funcionarios Galpao']){ CFG.catGroup['Salario Funcionarios Galpao']=gp.id; mud=true; }
+  // salários da equipe do galpão ficam dentro do grupo Galpão (o grupo "Pessoal Galpão" deixou de existir)
+  const gal=CFG.groups.find(g=>g.id==='g_gal')||CFG.groups.find(g=>/^galpao$/.test(semAcento(g.nome)));
+  if(gal && !(CFG.fixes||{}).salGalpao){
+    CFG.catGroup['Salario Funcionarios Galpao']=gal.id; CFG.fixes=CFG.fixes||{}; CFG.fixes.salGalpao=1;
+    const ix=CFG.groups.findIndex(g=>g.id==='g_pesg'||/pessoal\s*galp/.test(semAcento(g.nome)));
+    if(ix>=0){ const gid=CFG.groups[ix].id; if(!Object.entries(CFG.catGroup).some(([c,g])=>g===gid)) CFG.groups.splice(ix,1); }
+    mud=true;
+  }
   if(mud) await saveCfg();
 }
 async function loadCfg(){ await loadCfg0(); await garantirCatsExtras(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); await garantirOurocap(); }
