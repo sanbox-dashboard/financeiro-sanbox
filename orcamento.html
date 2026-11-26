@@ -432,9 +432,10 @@ const SEED = [
   {id:'g_fre',nome:'Fretes',tipo:'despesa',cats:['Frete Venda','Frete Compra']},
   {id:'g_adm',nome:'Administrativo e serviços',tipo:'despesa',cats:['Contabilidade','Juridico','Papelaria','Telecomunicacao, internet','Alugueis e condominio','Agua, luz','Servicos Gerais','Prestacao de Servico','Supermercado','Outros','Viagem','Cursos','Insumos Sanbox']},
   {id:'g_aju',nome:'Ajustes de pedidos',tipo:'despesa',cats:['Estorno de pedido','Desconto de Pedido','Reembolso Parcial','Ressarcimento RMA']},
-  {id:'g_inv',nome:'Investimentos e ativos',tipo:'financeiro',cats:['Maquinas e Equipamentos','Ativo Imobilizado','Ativo Imobilizado Galpao','Importacao','Investimentos','Aplicacoes Financeiras']},
+  {id:'g_inv',nome:'Investimentos e ativos',tipo:'financeiro',cats:['Maquinas e Equipamentos','Ativo Imobilizado','Ativo Imobilizado Galpao','Investimentos','Aplicacoes Financeiras']},
   {id:'g_fin',nome:'Custos financeiros',tipo:'financeiro',cats:['Emprestimo','Finimpe','Verbas','Outros Custos / Créditos']},
   {id:'g_dist',nome:'Distribuição de lucros',tipo:'distrib',cats:['Distribuição de lucros']},
+  {id:'g_impo',nome:'Importação',tipo:'fora',cats:['Importacao']},
   {id:'g_forn',nome:'Fornecedores (fora do resultado)',tipo:'fora',cats:['Fornecedores']}
 ];
 /* ══════════ ORÇAMENTO SUGERIDO PELO ANALISTA (aplicado só em grupos ainda sem orçamento) ══════════ */
@@ -495,7 +496,14 @@ async function aplicarFixComp(){
   for(const [id,comp] of Object.entries(FIX_COMP)) if(!CFG.lineMoves[id]) CFG.lineMoves[id]={comp};
   CFG.fixes[FIX_COMP_ID]=1; await saveCfg();
 }
-async function loadCfg(){ await loadCfg0(); await aplicarFixComp(); await garantirDistrib(); }
+async function garantirImportacao(){
+  if(CFG.groups.some(g=>g.id==='g_impo')) return;
+  const i=CFG.groups.findIndex(g=>g.id==='g_forn'); const g={id:'g_impo',nome:'Importação',tipo:'fora',orc:{modo:'none',base:'',meses:{}}};
+  if(i<0) CFG.groups.push(g); else CFG.groups.splice(i,0,g);
+  if(!CFG.catGroup['Importacao'] || CFG.catGroup['Importacao']==='g_inv') CFG.catGroup['Importacao']='g_impo';
+  await saveCfg();
+}
+async function loadCfg(){ await loadCfg0(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); }
 async function loadCfg0(){
   const c=await stGet('orc_cfg');
   if(c && c.groups){ CFG=Object.assign(seedCfg(),c); CFG.ui=Object.assign(seedCfg().ui,c.ui||{});
