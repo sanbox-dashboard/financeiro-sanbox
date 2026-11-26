@@ -740,6 +740,21 @@ function agendarProximas(){
   setTimeout(()=>{ liveUpdate('agendado '+prox.getHours()+':'+String(prox.getMinutes()).padStart(2,'0')); agendarProximas(); }, prox-now);
 }
 
+/* Reclassificação automática por contato (só no dashboard, não altera o Tiny).
+   Vale também para os próximos pagamentos desses contatos. Um "Mover" feito à mão tem prioridade. */
+const semAcento = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+const AUTO_RECLASS = [
+  ['capitacao','Ourocap'], ['capitalizacao ourocap','Ourocap'], ['ourocap','Ourocap'],
+  ['parcela hedge','Importacao'],
+  ['arminter comercio exterior','Importacao'],
+  ['t v v terminal de vila velha','Importacao'],
+  ['milcred fomento comercial','Importacao'],
+  ['duimpweb solucoes em comercio exterior','Importacao'],
+  ['cambio','Importacao'],
+  ['ouribank','Importacao'],
+  ['retencao imposto de renda','Importacao'],
+  ['tarifa envio ope','Importacao']
+];
 /* ══════════ MODELO (agregações) ══════════ */
 let M={cat:{},con:{},lines:{},catsData:new Set(),byId:{}};
 function buildModel(){
@@ -748,7 +763,7 @@ function buildModel(){
   for(const l of STATE.lanc){
     let ecat=l.cat, ecomp=l.comp, moved=false;
     const mv=CFG.lineMoves[l.id];
-    if(!mv && /^capitaliza[cç][aã]o ourocap/i.test(l.nome||'')) ecat='Ourocap';
+    if(!mv){ const nn=semAcento(l.nome); const rr=AUTO_RECLASS.find(x=>nn.startsWith(x[0])); if(rr) ecat=rr[1]; }
     if(mv){ if(mv.cat) ecat=mv.cat; if(mv.comp) ecomp=mv.comp; moved=true; }
     else if(rules.length){ const n60=l.nome.slice(0,60);
       for(const r of rules){ if(r.cat===l.cat&&r.de===l.comp&&r.nome===n60){ ecat=r.paraCat; ecomp=r.para; moved=true; break; } } }
