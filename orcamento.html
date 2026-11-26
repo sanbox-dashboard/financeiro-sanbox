@@ -514,6 +514,7 @@ async function garantirOurocap(){
 async function garantirCatsExtras(){
   let mud=false;
   if(!CFG.catGroup['Wellhub']){ CFG.catGroup['Wellhub']='g_pes'; mud=true; }
+  if(!CFG.catGroup['Beneficios Galpao']){ const gg=CFG.groups.find(g=>g.id==='g_gal'); if(gg){ CFG.catGroup['Beneficios Galpao']=gg.id; mud=true; } }
   // salários da equipe do galpão ficam dentro do grupo Galpão (o grupo "Pessoal Galpão" deixou de existir)
   const gal=CFG.groups.find(g=>g.id==='g_gal')||CFG.groups.find(g=>/^galpao$/.test(semAcento(g.nome)));
   if(gal && !(CFG.fixes||{}).salGalpao){
@@ -773,6 +774,16 @@ function agendarProximas(){
 /* Reclassificação automática por contato (só no dashboard, não altera o Tiny).
    Vale também para os próximos pagamentos desses contatos. Um "Mover" feito à mão tem prioridade. */
 const semAcento = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+/* Benefícios (plano de saúde, VT, VA) do ES vão para Galpão; os de MG continuam em Pessoal.
+   ES = histórico com "ES" (ex.: iFood -ES, Vale Transporte ES), QualiSaúde, Sindicato de transporte do ES
+   ou funcionário do galpão (no contato ou no histórico, ex.: recarga Alelo do Washington). */
+const BENEF_CATS = new Set(['Plano de Saude','Vale Transporte','Vale Alimentacao']);
+const EQUIPE_ES = /welton|washington|caio loureiro|rodrigo de almeida|carlos eduardo almeida|kevelin|kennedy eric/;
+function ehBenefES(l){
+  const n=semAcento(l.nome), h=String(l.hist||'');
+  return /(^|[^A-Za-z])ES([^A-Za-z]|$)/.test(h) || /^qualisaude|^sindicato das empresas de transporte/.test(n)
+    || EQUIPE_ES.test(n) || EQUIPE_ES.test(semAcento(h));
+}
 const AUTO_RECLASS = [
   ['capitacao','Ourocap'], ['capitalizacao ourocap','Ourocap'], ['ourocap','Ourocap'],
   ['parcela hedge','Importacao'],
@@ -808,7 +819,8 @@ function buildModel(){
   for(const l of STATE.lanc){
     let ecat=l.cat, ecomp=l.comp, moved=false;
     const mv=CFG.lineMoves[l.id];
-    { const nn=semAcento(l.nome); const rr=AUTO_RECLASS.find(x=>nn.startsWith(x[0])); if(rr) ecat=rr[1]; }   // "Mover" com categoria escolhida à mão vence (abaixo)
+    { const nn=semAcento(l.nome); const rr=AUTO_RECLASS.find(x=>nn.startsWith(x[0])); if(rr) ecat=rr[1];
+      if(BENEF_CATS.has(ecat) && ehBenefES(l)) ecat='Beneficios Galpao'; }   // "Mover" com categoria escolhida à mão vence (abaixo)
     if(mv){ if(mv.cat) ecat=mv.cat; if(mv.comp) ecomp=mv.comp; moved=true; }
     else if(rules.length){ const n60=l.nome.slice(0,60);
       for(const r of rules){ if(r.cat===l.cat&&r.de===l.comp&&r.nome===n60){ ecat=r.paraCat; ecomp=r.para; moved=true; break; } } }
