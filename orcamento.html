@@ -85,6 +85,7 @@
   tr.grp.t-fora td{background:var(--out-bg);} tr.grp.t-fora td.catcol{border-left-color:var(--out); color:var(--out);}
   tr.grp.t-financeiro td{background:var(--fin-bg);} tr.grp.t-financeiro td.catcol{border-left-color:var(--fin); color:var(--fin);}
   tr.grp.t-distrib td{background:var(--dis-bg);} tr.grp.t-distrib td.catcol{border-left-color:var(--dis); color:var(--dis);} tr.par.t-distrib td.catcol{border-left-color:var(--dis);}
+  tr.spc-fora td{height:22px;background:var(--bg)!important;border:none!important;}
   tr.par td{font-weight:900; font-size:12.5px; text-transform:uppercase; letter-spacing:.5px; color:#fff; background:#1A1F2E; border-top:2px solid #1A1F2E; cursor:pointer;}
   tr.par td.catcol{background:#1A1F2E; border-left:5px solid var(--out);}
   tr.par td .sub{color:rgba(255,255,255,.7)!important;} tr.par td .tag{background:rgba(255,255,255,.14); color:#fff; border-color:transparent;}
@@ -1064,7 +1065,7 @@ function renderMes(){
   const mk=ST.focus, pk=prevMk(mk), base=fatBase(mk); const hp=mkOrd(pk)>='202601';
   const gs=orderedGroups();
   let h=`<table><thead><tr><th class="catcol">${mLong(mk)} — realizado × previsto${isPast(mk)?'':'<div style="font-size:11px;font-weight:400;color:var(--mut)">mês em andamento: compara só o que já foi lançado até agora</div>'}</th><th>Realizado</th><th class="prev">Previsto</th><th>Total</th><th>% s/ fat.</th><th>${hp?mLabel(pk):'mês ant.'}</th><th>Δ R$</th><th>Δ %</th></tr></thead><tbody>`;
-  let curP=null;
+  const loopG=(gs)=>{ let curP=null;
   for(const g of gs){
     const tp=tipoDe(g);
     if(tp!==curP){ curP=tp; const pa=aggP(tp,mk,gs), pp=hp?aggP(tp,pk,gs):{t:null}, po=orcP(tp,mk,gs); const pc=po?pa.t/po:null; const pov=po!=null&&pa.t>po+0.5;
@@ -1101,6 +1102,8 @@ function renderMes(){
       }
     }
   }
+  };
+  loopG(gs.filter(g=>tipoDe(g)!=='fora'));
   // resumo
   const rs=resumoMes(mk);
   const pr=hp?resumoMes(pk):{base:null,acc:{receita:{t:null},deducao:{t:null},despesa:{t:null},financeiro:{t:null},distrib:{t:null},fora:{t:null}},margem:{t:null},oper:{t:null},res:{t:null},apos:{t:null},aj:null};
@@ -1117,7 +1120,7 @@ function renderMes(){
   h+=sumRow('= Resultado (projetado)',rs.res.r,rs.res.t,pr.res.t,true,'res');
   if(rs.acc.distrib.t||(pr.acc.distrib.t||0)){ h+=sumRow('(−) Distribuição de lucros',rs.acc.distrib.r,rs.acc.distrib.t,pr.acc.distrib.t,false);
     h+=sumRow('= Resultado após distribuição',rs.apos.r,rs.apos.t,pr.apos.t,true,'big'); }
-  h+=sumRow('(i) Fora do resultado (ex.: fornecedores)',rs.acc.fora.r,rs.acc.fora.t,pr.acc.fora.t,null);
+  const gsF=gs.filter(g=>tipoDe(g)==='fora'); if(gsF.length){ h+=`<tr class="spc-fora"><td class="catcol" title="Fora do resultado: não entra no resultado projetado"></td><td colspan="7"></td></tr>`; loopG(gsF); }
   h+=`</tbody></table>`;
   return h;
 }
@@ -1166,7 +1169,7 @@ function renderComp(){
       if(v!=null){ sum+=v; if(Math.abs(v)>0.005) n++; } if(isPct){ stt+=aggP(tp,mk,gs).t; sb+=fatBase(mk); } }
     s+= isPct ? `<td class="num"><b>${sb?pc1(stt/sb):'—'}</b></td>` : `<td class="num"><b>${mny(sum,'0')}</b></td><td class="num">${n?mny(sum/n):''}</td>`;
     return s; };
-  let curP=null;
+  const loopG=(gs)=>{ let curP=null;
   for(const g of gs){
     const tp=tipoDe(g);
     if(tp!==curP){ curP=tp; h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td>${parCells(tp)}`); }
@@ -1209,6 +1212,8 @@ function renderComp(){
       }
     }
   }
+  };
+  loopG(gs.filter(g=>tipoDe(g)!=='fora'));
   if(kind==='tot'){
     h+=`<tr class="sumhead"><td class="catcol">Resultado por mês</td><td colspan="${months.length+2}"></td></tr>`;
     const rows=[['Faturamento (base)',rs=>rs.base,true],['Custos fixos',rs=>rs.acc.despesa.t,false],['Despesas financeiras',rs=>rs.acc.financeiro.t,false],['Resultado projetado',rs=>rs.res.t,true,'res'],['Distribuição de lucros',rs=>rs.acc.distrib.t,false],['Resultado após distribuição',rs=>rs.apos.t,true],['Resultado % do faturamento',rs=>rs.base?rs.res.t/rs.base:null,true,'pct']];
@@ -1219,6 +1224,7 @@ function renderComp(){
       h+=`<tr class="sum ${cls==='res'?'res':''}"><td class="catcol">${lab}</td>${s}<td class="num">${cls==='pct'?'':mny(sum,'0')}</td><td></td></tr>`;
     }
   }
+  const gsF=gs.filter(g=>tipoDe(g)==='fora'); if(gsF.length){ h+=`<tr class="spc-fora"><td class="catcol" title="Fora do resultado: não entra no resultado projetado"></td><td colspan="${months.length+(isPct?1:2)}"></td></tr>`; loopG(gsF); }
   h+=`</tbody></table>`;
   return h;
 }
@@ -1250,7 +1256,7 @@ function renderTri(){
   for(const mk of months) h+=`<th class="ms">Realizado</th><th class="prev">Previsto</th><th>Total</th>`;
   h+=`</tr></thead><tbody>`;
   const chipT=(i,v,up,get)=>{ if(!i) return ''; const pv=get(months[i-1]); return `<span class="sub">${chip(v,pv,up)}</span>`; };
-  let curP=null;
+  const loopG=(gs)=>{ let curP=null;
   for(const g of gs){
     const tp=tipoDe(g);
     if(tp!==curP){ curP=tp; let s=''; months.forEach((mk,i)=>{ const a=aggP(tp,mk,gs), o=orcP(tp,mk,gs); const c=o?a.t/o:null;
@@ -1299,6 +1305,8 @@ function renderTri(){
       }
     }
   }
+  };
+  loopG(gs.filter(g=>tipoDe(g)!=='fora'));
   /* resumo por mês */
   const R=months.map(mk=>resumoMes(mk));
   h+=`<tr class="sumhead"><td class="catcol">Resultado por mês</td><td colspan="${months.length*W}"></td></tr>`;
@@ -1311,6 +1319,7 @@ function renderTri(){
       h+=`<td class="num ms">${rr==null?'':mny(rr,'0')}</td><td></td><td class="num">${mny(t,'0')}${base&&!lab.startsWith('Fat')?`<span class="sub" style="opacity:.8">${pc1(t/base)}</span>`:''}${i?`<span class="sub">${chip(t,ft(R[i-1]),up)}</span>`:''}</td>`; });
     h+=`</tr>`;
   }
+  const gsF=gs.filter(g=>tipoDe(g)==='fora'); if(gsF.length){ h+=`<tr class="spc-fora"><td class="catcol" title="Fora do resultado: não entra no resultado projetado"></td><td colspan="${months.length*W}"></td></tr>`; loopG(gsF); }
   h+=`</tbody></table>`;
   return h;
 }
@@ -1695,7 +1704,7 @@ function exportXLSX(){
   const a1=[['Grupo / Categoria','Realizado','Previsto','Total','% s/ faturamento',mLabel(pk)+' (total)','Δ R$','Δ %']];
   const base=fatBase(mk);
   const gsX=orderedGroups(); let curP=null;
-  for(const g of gsX){
+  const exp1=(lista)=>{ for(const g of lista){
     const tp=tipoDe(g), flat=flatG(tp,gsX);
     if(tp!==curP){ curP=tp; const a=aggP(tp,mk,gsX), pa=aggP(tp,pk,gsX), o=orcP(tp,mk,gsX);
       a1.push([TIPOS[tp].toUpperCase(), a.r, a.p, a.t, base?a.t/base:'', pa.t, a.t-pa.t, pa.t?(a.t-pa.t)/Math.abs(pa.t):'']); }
@@ -1703,13 +1712,15 @@ function exportXLSX(){
     if(!flat){ const a=aggG(g.id,mk), pa=aggG(g.id,pk), o=g.virtual?null:orcado(g,mk);
       a1.push(['   '+g.nome, a.r, a.p, a.t, base?a.t/base:'', pa.t, a.t-pa.t, pa.t?(a.t-pa.t)/Math.abs(pa.t):'']); }
     for(const c of visibleCats(g.id,[mk,pk])){ const v=catVal(c,mk), pv=catVal(c,pk); a1.push([ind+c,v.r,v.p,tot(v),base?tot(v)/base:'',tot(pv),tot(v)-tot(pv),tot(pv)?(tot(v)-tot(pv))/Math.abs(tot(pv)):'']); }
-  }
+  } };
+  exp1(gsX.filter(g=>tipoDe(g)!=='fora'));
   { const rs=resumoMes(mk), pr=resumoMes(pk); const L=(n,c,pc)=>a1.push([n,'','',c,base?c/base:'',pc,c-pc,pc?(c-pc)/Math.abs(pc):'']);
     a1.push([]); a1.push(['RESULTADO DO MÊS']);
     L('Faturamento (base)',rs.base,pr.base); L('(+) Receitas complementares',rs.acc.receita.t,pr.acc.receita.t); L('(−) Deduções de vendas',rs.acc.deducao.t,pr.acc.deducao.t);
     if(rs.aj||pr.aj) L('(−) Custo dos produtos a incorrer (estimativa)',rs.aj||0,pr.aj||0);
     L('= Margem',rs.margem.t,pr.margem.t); L('(−) Custos fixos',rs.acc.despesa.t,pr.acc.despesa.t); L('= Resultado operacional',rs.oper.t,pr.oper.t);
-    L('(−) Despesas financeiras',rs.acc.financeiro.t,pr.acc.financeiro.t); L('= Resultado (projetado)',rs.res.t,pr.res.t); L('(−) Distribuição de lucros',rs.acc.distrib.t,pr.acc.distrib.t); L('= Resultado após distribuição',rs.apos.t,pr.apos.t); L('(i) Fora do resultado',rs.acc.fora.t,pr.acc.fora.t); }
+    L('(−) Despesas financeiras',rs.acc.financeiro.t,pr.acc.financeiro.t); L('= Resultado (projetado)',rs.res.t,pr.res.t); L('(−) Distribuição de lucros',rs.acc.distrib.t,pr.acc.distrib.t); L('= Resultado após distribuição',rs.apos.t,pr.apos.t); }
+  { const gF=gsX.filter(g=>tipoDe(g)==='fora'); if(gF.length){ a1.push([]); curP=null; exp1(gF); } }
   // 2) comparativo (total por mês)
   const a2=[['Grupo / Categoria',...months.map(mLabel),'Total']];
   const orcLines=[];
