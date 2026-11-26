@@ -418,7 +418,7 @@ window.__snapshot = () => deflate(STATE);
 const VC = { // categorias virtuais (não vêm das contas a pagar)
   'Custos dos produtos':{auto:true},
   'Frete Entrada':{manual:true}, 'Comissões':{manual:true}, 'Custos Marketplaces':{manual:true},
-  'Verbas':{manual:true}, 'Outros Custos / Créditos':{manual:true}
+  'Outros Custos / Créditos':{manual:true}
 };
 const SEED = [
   {id:'g_rec',nome:'Receitas complementares',tipo:'receita',cats:['Frete Entrada']},
@@ -552,13 +552,15 @@ async function liveUpdate(trigger){
   const st=document.getElementById('status');
   try{
     st.textContent='⏳ Atualizando dados ao vivo ('+trigger+')...';
-    const [compCols, contaCols, pedCols, metasResp, itensCols, prodCols] = await Promise.all([
+    const [compCols, contaCols, pedCols, metasResp, itensCols, prodCols, recCols] = await Promise.all([
       batchCols(ID_KOND, ABA_CONTAS, ['A','R']),
       batchCols(ID_CONTAS, ABA_CONTAS, ['A','B','M','P','Q','O','T','W','D','F','I','L','R','K']),
       batchCols(ID_KOND, ABA_PED, ['A','AA','AC','BE','BK','BM']),
       fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ID_METAS}/values/${encodeURIComponent('A1:H400')}?key=${KEY}`).then(r=>r.json()),
       batchCols(ID_KOND, 'tinyerp_pedidos_detalhes_itens', ['B','E','J','L']),
-      batchCols(ID_KOND, 'tinyerp_produtos', ['H','AH'])
+      batchCols(ID_KOND, 'tinyerp_produtos', ['H','AH']),
+      // contas a receber: só a categoria "Verba Fornecedores" é usada (entra em Verbas como crédito)
+      batchCols(ID_CONTAS, 'tinyerp_contas_receber_detalhes', ['A','B','E','D','F','O','T','X','AA','U']).catch(()=>null)
     ]);
 
     // competência por conta_id (de 2026 em diante)
@@ -590,6 +592,21 @@ async function liveUpdate(trigger){
         nome:((anome[i]||'(sem contato)').trim()||'(sem contato)'), hist:(ahist[i]||'').trim(), doc:(adoc[i]||'').trim(),
         parc:(aparc[i]||'').trim(), ocor:(aocor[i]||'').trim(), venc:isoDate(avenc[i]), liq:isoDate(aliq[i]),
         val,mu,ju,pg, r:r2(sit==='pago' ? (pg>0?pg:val+mu+ju) : pg), p:r2(sit==='pago' ? 0 : val+mu+ju-pg)});
+    }
+
+    // verbas de fornecedores (contas a receber) → categoria Verbas, com sinal negativo (reduz as despesas)
+    if(recCols){
+      const [rid,rsit,rcomp,rvenc,rliq,rval,rpag,rnome,rcat,rhist]=recCols;
+      for(let i=1;i<rid.length;i++){
+        if(!/verba\s*fornecedor/i.test(rcat[i]||'')) continue;
+        const sit=(rsit[i]||'').toLowerCase().trim(); if(sit.includes('cancel')) continue;
+        const comp=normComp(rcomp[i])||normComp(rvenc[i]); if(!comp||mkOrd(comp)<'202601') continue;
+        const val=pnum(rval[i]), pg=pnum(rpag[i]); const pago=sit.startsWith('pag')||sit==='recebido'||sit==='liquidado';
+        lanc.push({id:'R'+(rid[i]||'').trim(),sit:pago?'pago':sit,comp,cat:'Verbas',
+          nome:((rnome[i]||'(sem contato)').trim()||'(sem contato)'), hist:(rhist[i]||'').trim(), doc:'', parc:'', ocor:'',
+          venc:isoDate(rvenc[i]), liq:isoDate(rliq[i]), val:-val, mu:0, ju:0, pg:-pg,
+          r:r2(pago ? -(pg>0?pg:val) : -pg), p:r2(pago ? 0 : -(val-pg))});
+      }
     }
 
     // vendas
