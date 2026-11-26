@@ -15,6 +15,7 @@
     --des:#2B4A66; --des-bg:#EEF3F8;
     --out:#64748B; --out-bg:#F1F4F8;
     --fin:#7C3AED; --fin-bg:#F4EFFD;
+    --dis:#0E7490; --dis-bg:#ECFEFF;
     --good:#16A34A; --bad:#DC2626; --warn:#D4881A; --new:#8A3FFC;
     --focus:rgba(245,166,35,.14); --prev-tint:rgba(245,166,35,.07);
     --sh:0 1px 8px rgba(0,0,0,.07);
@@ -83,6 +84,7 @@
   tr.grp.t-despesa td{background:var(--des-bg);} tr.grp.t-despesa td.catcol{border-left-color:var(--des); color:var(--des);}
   tr.grp.t-fora td{background:var(--out-bg);} tr.grp.t-fora td.catcol{border-left-color:var(--out); color:var(--out);}
   tr.grp.t-financeiro td{background:var(--fin-bg);} tr.grp.t-financeiro td.catcol{border-left-color:var(--fin); color:var(--fin);}
+  tr.grp.t-distrib td{background:var(--dis-bg);} tr.grp.t-distrib td.catcol{border-left-color:var(--dis); color:var(--dis);} tr.par.t-distrib td.catcol{border-left-color:var(--dis);}
   tr.par td{font-weight:900; font-size:12.5px; text-transform:uppercase; letter-spacing:.5px; color:#fff; background:#1A1F2E; border-top:2px solid #1A1F2E; cursor:pointer;}
   tr.par td.catcol{background:#1A1F2E; border-left:5px solid var(--out);}
   tr.par td .sub{color:rgba(255,255,255,.7)!important;} tr.par td .tag{background:rgba(255,255,255,.14); color:#fff; border-color:transparent;}
@@ -432,6 +434,7 @@ const SEED = [
   {id:'g_aju',nome:'Ajustes de pedidos',tipo:'despesa',cats:['Estorno de pedido','Desconto de Pedido','Reembolso Parcial','Ressarcimento RMA']},
   {id:'g_inv',nome:'Investimentos e ativos',tipo:'financeiro',cats:['Maquinas e Equipamentos','Ativo Imobilizado','Ativo Imobilizado Galpao','Importacao','Investimentos','Aplicacoes Financeiras']},
   {id:'g_fin',nome:'Custos financeiros',tipo:'financeiro',cats:['Emprestimo','Finimpe','Verbas','Outros Custos / Créditos']},
+  {id:'g_dist',nome:'Distribuição de lucros',tipo:'distrib',cats:['Distribuição de lucros']},
   {id:'g_forn',nome:'Fornecedores (fora do resultado)',tipo:'fora',cats:['Fornecedores']}
 ];
 /* ══════════ ORÇAMENTO SUGERIDO PELO ANALISTA (aplicado só em grupos ainda sem orçamento) ══════════ */
@@ -451,8 +454,8 @@ function applySug(){
   CFG.sugAplicada=ORC_SUG.versao; return true;
 }
 // 4 categorias pai do orçamento (+ fora do resultado). Cada grupo pertence a uma delas e pode ser movido.
-const TIPOS = {receita:'Receitas complementares', deducao:'Deduções de vendas', despesa:'Custos fixos', financeiro:'Despesas financeiras', fora:'Fora do resultado'};
-const TIPO_ORD = ['receita','deducao','despesa','financeiro','fora'];
+const TIPOS = {receita:'Receitas complementares', deducao:'Deduções de vendas', despesa:'Custos fixos', financeiro:'Despesas financeiras', distrib:'Distribuição de lucros', fora:'Fora do resultado'};
+const TIPO_ORD = ['receita','deducao','despesa','financeiro','distrib','fora'];
 const tipoDe = g => g.virtual ? 'despesa' : (TIPOS[g.tipo] ? g.tipo : 'despesa');
 const NONE_G = {id:'_none', nome:'Sem grupo — classificar', tipo:'despesa', orc:{modo:'none',base:0,meses:{}}, virtual:true};
 
@@ -480,13 +483,19 @@ const saveCfg = () => stSet('orc_cfg', CFG);
    (dá para desfazer em Grupos e previstos). Só aplica uma vez e não sobrescreve um movimento já feito à mão. */
 const FIX_COMP_ID='fix_20261126';
 const FIX_COMP={"741600189":"11/2026","741610901":"11/2026","739579649":"10/2026","741422967":"10/2026","741423041":"10/2026","741423047":"10/2026","741423330":"10/2026","741426365":"10/2026","741426624":"10/2026","741426413":"10/2026","741525551":"07/2027","741525553":"07/2027","741525555":"08/2027","741525557":"08/2027","741525559":"08/2027","741525561":"08/2027","741525563":"09/2027","741525565":"09/2027","741525568":"09/2027","741525571":"09/2027","741525573":"10/2027","741525575":"10/2027","741525577":"10/2027","741525579":"10/2027","741525501":"01/2027","741525503":"02/2027","741525505":"02/2027","741525507":"02/2027","741525509":"02/2027","741525511":"03/2027","741525513":"03/2027","741525515":"03/2027","741525517":"03/2027","741525519":"04/2027","741525521":"04/2027","741525523":"04/2027","741525525":"04/2027","741525527":"04/2027","741525529":"05/2027","741525531":"05/2027","741525533":"05/2027","741525535":"05/2027","741525537":"06/2027","741525539":"06/2027","741525541":"06/2027","741525543":"06/2027","741525545":"07/2027","741525547":"07/2027","741525549":"07/2027","741525476":"11/2026","741525478":"11/2026","741525480":"11/2026","741525483":"11/2026","741525485":"12/2026","741525487":"12/2026","741525489":"12/2026","741525491":"12/2026","741525493":"01/2027","741525495":"01/2027","741525497":"01/2027","741525499":"01/2027"};
+async function garantirDistrib(){
+  if(!CFG.catGroup['Distribuição de lucros']){ CFG.catGroup['Distribuição de lucros']='g_dist'; await saveCfg(); }
+  if(CFG.groups.some(g=>g.tipo==='distrib'||g.id==='g_dist')) return;
+  const i=CFG.groups.findIndex(g=>g.tipo==='fora'); const g={id:'g_dist',nome:'Distribuição de lucros',tipo:'distrib',orc:{modo:'none',base:'',meses:{}}};
+  if(i<0) CFG.groups.push(g); else CFG.groups.splice(i,0,g); await saveCfg();
+}
 async function aplicarFixComp(){
   CFG.fixes=CFG.fixes||{}; if(CFG.fixes[FIX_COMP_ID]) return;
   CFG.lineMoves=CFG.lineMoves||{};
   for(const [id,comp] of Object.entries(FIX_COMP)) if(!CFG.lineMoves[id]) CFG.lineMoves[id]={comp};
   CFG.fixes[FIX_COMP_ID]=1; await saveCfg();
 }
-async function loadCfg(){ await loadCfg0(); await aplicarFixComp(); }
+async function loadCfg(){ await loadCfg0(); await aplicarFixComp(); await garantirDistrib(); }
 async function loadCfg0(){
   const c=await stGet('orc_cfg');
   if(c && c.groups){ CFG=Object.assign(seedCfg(),c); CFG.ui=Object.assign(seedCfg().ui,c.ui||{});
@@ -768,7 +777,7 @@ const nGr = (tp,gs) => { const n=groupsDoPai(tp,gs).length; return n+(n===1?' gr
 const pvR = (v,mk) => { const b=fatR(mk); return b&&v?`<span class="pv" title="% sobre a venda realizada do mês">${pc1(v/b)}</span>`:''; };
 const pvP = (v,mk) => { const b=metaV(mk); return b&&v?`<span class="pv" title="% sobre a venda prevista (meta) do mês">${pc1(v/b)}</span>`:''; };
 // Receitas complementares e Deduções de vendas: com um grupo só, a categoria pai abre direto nas categorias (sem repetir o nome)
-const flatG = (tp,gs) => (tp==='receita'||tp==='deducao') && groupsDoPai(tp,gs).length===1;
+const flatG = (tp,gs) => (tp==='receita'||tp==='deducao'||tp==='distrib') && groupsDoPai(tp,gs).length===1;
 const parTag = (tp,gs) => { if(flatG(tp,gs)){ const g=groupsDoPai(tp,gs)[0]; return g.virtual?'':`<span class="tag orc" data-gedit="${g.id}" title="Lançar o previsto total do grupo por mês">${(g.orc&&g.orc.modo!=='none')?'previsto do grupo':'lançar previsto do grupo'}</span>`; } return `<span class="tag">${nGr(tp,gs)}</span>`; };
 const parCollapsed = tp => !!(CFG.ui.collapsedP||{})[tp];
 const parHead = (tp,inner) => `<tr class="par t-${tp}" data-par="${tp}">${inner}</tr>`;
@@ -884,13 +893,14 @@ function custoRatio(mk){ let m=mk; for(let i=0;i<14;i++){ const v=STATE.vendas[m
 function custoAjuste(mk){ if(isPast(mk)) return 0; const est=fatBase(mk)*custoRatio(mk); return Math.max(0, est-((STATE.custosProd||{})[mk]||0)); }
 function resumoMes(mk){
   const v=STATE.vendas[mk]||{r:0,p:0}; const base=fatBase(mk); const aj=custoAjuste(mk);
-  const acc={receita:{r:0,t:0},deducao:{r:0,t:0},despesa:{r:0,t:0},financeiro:{r:0,t:0},fora:{r:0,t:0}};
+  const acc={receita:{r:0,t:0},deducao:{r:0,t:0},despesa:{r:0,t:0},financeiro:{r:0,t:0},distrib:{r:0,t:0},fora:{r:0,t:0}};
   for(const g of [...CFG.groups,NONE_G]){ const a=aggG(g.id,mk); const tp=tipoDe(g); acc[tp].r+=a.r; acc[tp].t+=a.t; }
   const margem={r:v.r+acc.receita.r-acc.deducao.r, t:base+acc.receita.t-acc.deducao.t-aj};
   const oper={r:margem.r-acc.despesa.r, t:margem.t-acc.despesa.t};
   const res={r:oper.r-acc.financeiro.r, t:oper.t-acc.financeiro.t};
   const desp={r:acc.despesa.r+acc.financeiro.r, t:acc.despesa.t+acc.financeiro.t};
-  return {v,base,acc,margem,oper,res,desp,aj};
+  const apos={r:res.r-acc.distrib.r, t:res.t-acc.distrib.t};
+  return {v,base,acc,margem,oper,res,apos,desp,aj};
 }
 function renderKPIs(){
   const mk=ST.focus, rs=resumoMes(mk);
@@ -1004,7 +1014,7 @@ function renderMes(){
   }
   // resumo
   const rs=resumoMes(mk);
-  const pr=hp?resumoMes(pk):{base:null,acc:{receita:{t:null},deducao:{t:null},despesa:{t:null},financeiro:{t:null},fora:{t:null}},margem:{t:null},oper:{t:null},res:{t:null},aj:null};
+  const pr=hp?resumoMes(pk):{base:null,acc:{receita:{t:null},deducao:{t:null},despesa:{t:null},financeiro:{t:null},distrib:{t:null},fora:{t:null}},margem:{t:null},oper:{t:null},res:{t:null},apos:{t:null},aj:null};
   const sumRow=(label,r,t,pt,up,cls='',pctv=true)=>`<tr class="sum ${cls}"><td class="catcol">${label}</td><td class="num">${r==null?'':mny(r,'0')}</td><td class="num prev"></td><td class="num">${mny(t,'0')}</td><td class="num">${pctv&&rs.base?pc1(t/rs.base):''}</td><td class="num" style="opacity:.75">${mny(pt)}</td>${dcell(t,pt,up)}</tr>`;
   h+=`<tr class="sumhead"><td class="catcol">Resultado do mês (por categoria pai)</td><td colspan="7"></td></tr>`;
   h+=sumRow('Faturamento (base)',rs.v.r,rs.base,pr.base,true,'',false);
@@ -1016,6 +1026,8 @@ function renderMes(){
   h+=sumRow('= Resultado operacional',rs.oper.r,rs.oper.t,pr.oper.t,true,'big');
   h+=sumRow('(−) Despesas financeiras',rs.acc.financeiro.r,rs.acc.financeiro.t,pr.acc.financeiro.t,false);
   h+=sumRow('= Resultado (projetado)',rs.res.r,rs.res.t,pr.res.t,true,'res');
+  if(rs.acc.distrib.t||(pr.acc.distrib.t||0)){ h+=sumRow('(−) Distribuição de lucros',rs.acc.distrib.r,rs.acc.distrib.t,pr.acc.distrib.t,false);
+    h+=sumRow('= Resultado após distribuição',rs.apos.r,rs.apos.t,pr.apos.t,true,'big'); }
   h+=sumRow('(i) Fora do resultado (ex.: fornecedores)',rs.acc.fora.r,rs.acc.fora.t,pr.acc.fora.t,null);
   h+=`</tbody></table>`;
   return h;
@@ -1110,7 +1122,7 @@ function renderComp(){
   }
   if(kind==='tot'){
     h+=`<tr class="sumhead"><td class="catcol">Resultado por mês</td><td colspan="${months.length+2}"></td></tr>`;
-    const rows=[['Faturamento (base)',rs=>rs.base,true],['Custos fixos',rs=>rs.acc.despesa.t,false],['Despesas financeiras',rs=>rs.acc.financeiro.t,false],['Resultado projetado',rs=>rs.res.t,true,'res'],['Resultado % do faturamento',rs=>rs.base?rs.res.t/rs.base:null,true,'pct']];
+    const rows=[['Faturamento (base)',rs=>rs.base,true],['Custos fixos',rs=>rs.acc.despesa.t,false],['Despesas financeiras',rs=>rs.acc.financeiro.t,false],['Resultado projetado',rs=>rs.res.t,true,'res'],['Distribuição de lucros',rs=>rs.acc.distrib.t,false],['Resultado após distribuição',rs=>rs.apos.t,true],['Resultado % do faturamento',rs=>rs.base?rs.res.t/rs.base:null,true,'pct']];
     for(const [lab,fn,upv,cls] of rows){
       let s='',sum=0;
       for(const mk of months){ const rs=resumoMes(mk); const v=fn(rs); const hpm=mkOrd(prevMk(mk))>='202601'; const pv=hpm?fn(resumoMes(prevMk(mk))):null;
@@ -1202,7 +1214,7 @@ function renderTri(){
   const R=months.map(mk=>resumoMes(mk));
   h+=`<tr class="sumhead"><td class="catcol">Resultado por mês</td><td colspan="${months.length*W}"></td></tr>`;
   const rows=[['Faturamento (base)',r=>r.v.r,r=>r.base,true,''],['(+) Receitas complementares',r=>r.acc.receita.r,r=>r.acc.receita.t,true,''],['(−) Deduções de vendas',r=>r.acc.deducao.r,r=>r.acc.deducao.t,false,''],
-    ['(−) Custo dos produtos a incorrer (estimativa)',r=>null,r=>r.aj,false,'aj'],['= Margem',r=>r.margem.r,r=>r.margem.t,true,'big'],['(−) Custos fixos',r=>r.acc.despesa.r,r=>r.acc.despesa.t,false,''],['= Resultado operacional',r=>r.oper.r,r=>r.oper.t,true,'big'],['(−) Despesas financeiras',r=>r.acc.financeiro.r,r=>r.acc.financeiro.t,false,''],['= Resultado (projetado)',r=>r.res.r,r=>r.res.t,true,'res']];
+    ['(−) Custo dos produtos a incorrer (estimativa)',r=>null,r=>r.aj,false,'aj'],['= Margem',r=>r.margem.r,r=>r.margem.t,true,'big'],['(−) Custos fixos',r=>r.acc.despesa.r,r=>r.acc.despesa.t,false,''],['= Resultado operacional',r=>r.oper.r,r=>r.oper.t,true,'big'],['(−) Despesas financeiras',r=>r.acc.financeiro.r,r=>r.acc.financeiro.t,false,''],['= Resultado (projetado)',r=>r.res.r,r=>r.res.t,true,'res'],['(−) Distribuição de lucros',r=>r.acc.distrib.r,r=>r.acc.distrib.t,false,''],['= Resultado após distribuição',r=>r.apos.r,r=>r.apos.t,true,'big']];
   for(const [lab,fr,ft,up,cls] of rows){
     if(cls==='aj' && !R.some(r=>r.aj>0)) continue;
     h+=`<tr class="sum ${cls==='res'||cls==='big'?cls:''}"><td class="catcol">${lab}</td>`;
@@ -1392,7 +1404,7 @@ function modal(html){ const m=document.getElementById('modal'); m.innerHTML=html
 function closeModal(){ document.getElementById('modal').classList.remove('on'); if(!DR) document.getElementById('veil').classList.remove('on'); }
 function openMove(id){
   const l=M.byId[id]; if(!l) return;
-  const cats=[...M.catsData].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const cats=[...new Set([...M.catsData,'Distribuição de lucros'])].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   const ms=STATE.meses;
   modal(`<h3>Mover lançamento</h3><div style="color:var(--mut);font-size:13px;margin-bottom:8px">${E(l.nome)} — ${E(short(l.hist,100))}<br>Valor ${fmt2.format(l.val)} · original: ${E(l.cat)} · ${l.comp}</div>
     <div class="fr"><label>Categoria</label><select id="mvCat">${cats.map(c=>`<option${c===l.ecat?' selected':''}>${E(c)}</option>`).join('')}</select></div>
@@ -1608,7 +1620,7 @@ function exportXLSX(){
     L('Faturamento (base)',rs.base,pr.base); L('(+) Receitas complementares',rs.acc.receita.t,pr.acc.receita.t); L('(−) Deduções de vendas',rs.acc.deducao.t,pr.acc.deducao.t);
     if(rs.aj||pr.aj) L('(−) Custo dos produtos a incorrer (estimativa)',rs.aj||0,pr.aj||0);
     L('= Margem',rs.margem.t,pr.margem.t); L('(−) Custos fixos',rs.acc.despesa.t,pr.acc.despesa.t); L('= Resultado operacional',rs.oper.t,pr.oper.t);
-    L('(−) Despesas financeiras',rs.acc.financeiro.t,pr.acc.financeiro.t); L('= Resultado (projetado)',rs.res.t,pr.res.t); L('(i) Fora do resultado',rs.acc.fora.t,pr.acc.fora.t); }
+    L('(−) Despesas financeiras',rs.acc.financeiro.t,pr.acc.financeiro.t); L('= Resultado (projetado)',rs.res.t,pr.res.t); L('(−) Distribuição de lucros',rs.acc.distrib.t,pr.acc.distrib.t); L('= Resultado após distribuição',rs.apos.t,pr.apos.t); L('(i) Fora do resultado',rs.acc.fora.t,pr.acc.fora.t); }
   // 2) comparativo (total por mês)
   const a2=[['Grupo / Categoria',...months.map(mLabel),'Total']];
   const orcLines=[];
@@ -1623,7 +1635,7 @@ function exportXLSX(){
   { const add=(n,f)=>{ const r=[n]; let s=0; for(const m of months){ const v=f(resumoMes(m)); r.push(v); s+=v; } r.push(s); a2.push(r); };
     a2.push([]); a2.push(['RESULTADO']);
     add('Faturamento (base)',r=>r.base); add('= Margem',r=>r.margem.t); add('(−) Custos fixos',r=>r.acc.despesa.t); add('= Resultado operacional',r=>r.oper.t);
-    add('(−) Despesas financeiras',r=>r.acc.financeiro.t); add('= Resultado (projetado)',r=>r.res.t); }
+    add('(−) Despesas financeiras',r=>r.acc.financeiro.t); add('= Resultado (projetado)',r=>r.res.t); add('(−) Distribuição de lucros',r=>r.acc.distrib.t); add('= Resultado após distribuição',r=>r.apos.t); }
   // 3) lançamentos
   const a3=[['Competência','Categoria pai','Grupo','Categoria','Contato','Histórico','Documento','Vencimento','Liquidação','Situação','Valor','Multa','Juros','Pago','Em aberto','ID Tiny']];
   const ms=new Set(months);
