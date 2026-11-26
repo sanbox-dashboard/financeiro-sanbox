@@ -511,7 +511,10 @@ async function garantirOurocap(){
   if(!CFG.catGroup['Ourocap']){ CFG.catGroup['Ourocap']='g_ouro'; mud=true; }
   if(mud) await saveCfg();
 }
-async function loadCfg(){ await loadCfg0(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); await garantirOurocap(); }
+async function garantirCatsExtras(){
+  if(!CFG.catGroup['Wellhub']){ CFG.catGroup['Wellhub']='g_pes'; await saveCfg(); }
+}
+async function loadCfg(){ await loadCfg0(); await garantirCatsExtras(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); await garantirOurocap(); }
 async function loadCfg0(){
   const c=await stGet('orc_cfg');
   if(c && c.groups){ CFG=Object.assign(seedCfg(),c); CFG.ui=Object.assign(seedCfg().ui,c.ui||{});
@@ -753,7 +756,11 @@ const AUTO_RECLASS = [
   ['cambio','Importacao'],
   ['ouribank','Importacao'],
   ['retencao imposto de renda','Importacao'],
-  ['tarifa envio ope','Importacao']
+  ['tarifa envio ope','Importacao'],
+  ['antropic claude','Gatewary'], ['anthropic','Gatewary'], ['openai','Gatewary'],
+  ['decora art gesso','Ativo Imobilizado'],
+  ['wellhub','Wellhub'],
+  ['graziele vieira santos','Servicos Gerais']
 ];
 /* ══════════ MODELO (agregações) ══════════ */
 let M={cat:{},con:{},lines:{},catsData:new Set(),byId:{}};
@@ -763,7 +770,7 @@ function buildModel(){
   for(const l of STATE.lanc){
     let ecat=l.cat, ecomp=l.comp, moved=false;
     const mv=CFG.lineMoves[l.id];
-    if(!mv){ const nn=semAcento(l.nome); const rr=AUTO_RECLASS.find(x=>nn.startsWith(x[0])); if(rr) ecat=rr[1]; }
+    { const nn=semAcento(l.nome); const rr=AUTO_RECLASS.find(x=>nn.startsWith(x[0])); if(rr) ecat=rr[1]; }   // "Mover" com categoria escolhida à mão vence (abaixo)
     if(mv){ if(mv.cat) ecat=mv.cat; if(mv.comp) ecomp=mv.comp; moved=true; }
     else if(rules.length){ const n60=l.nome.slice(0,60);
       for(const r of rules){ if(r.cat===l.cat&&r.de===l.comp&&r.nome===n60){ ecat=r.paraCat; ecomp=r.para; moved=true; break; } } }
