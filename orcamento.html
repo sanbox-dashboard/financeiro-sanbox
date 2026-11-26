@@ -515,7 +515,7 @@ async function garantirOurocap(){
 async function garantirCatsExtras(){
   let mud=false;
   if(!CFG.catGroup['Wellhub']){ CFG.catGroup['Wellhub']='g_pes'; mud=true; }
-  if(!CFG.catGroup['Desconto em nota']){ const gr=CFG.groups.find(g=>g.tipo==='receita'); if(gr){ CFG.catGroup['Desconto em nota']=gr.id; mud=true; } }
+  if(!(CFG.fixes||{}).descNota){ const gr=CFG.groups.find(g=>g.id==='g_ded')||CFG.groups.find(g=>g.tipo==='deducao'); if(gr){ CFG.catGroup['Desconto em nota']=gr.id; CFG.fixes=CFG.fixes||{}; CFG.fixes.descNota=1; mud=true; } }
   if(!CFG.catGroup['Beneficios Galpao']){ const gg=CFG.groups.find(g=>g.id==='g_gal'); if(gg){ CFG.catGroup['Beneficios Galpao']=gg.id; mud=true; } }
   // salários da equipe do galpão ficam dentro do grupo Galpão (o grupo "Pessoal Galpão" deixou de existir)
   const gal=CFG.groups.find(g=>g.id==='g_gal')||CFG.groups.find(g=>/^galpao$/.test(semAcento(g.nome)));
@@ -608,14 +608,14 @@ async function liveUpdate(trigger){
     }
 
     // descontos em nota de fornecedor: título pago com valor menor que o do documento.
-    // Entram em Receitas complementares no mês do pagamento, a partir de set/2026 (MercadoMóveis fica de fora).
+    // Entram NEGATIVOS em Deduções de vendas (abatem o custo), no mês do pagamento, a partir de set/2026 (MercadoMóveis fica de fora).
     for(const l of lanc.slice()){
       if(l.sit!=='pago'||l.cat!=='Fornecedores'||!(l.pg>0)||!l.liq) continue;
       if(/mercado\s*moveis/i.test(semAcento(l.nome))) continue;
       const d=r2(l.val+l.mu+l.ju-l.pg); if(d<=0.009) continue;
       const comp=l.liq.slice(5,7)+'/'+l.liq.slice(0,4); if(mkOrd(comp)<'202609') continue;
       lanc.push({id:'D'+l.id,sit:'pago',comp,cat:'Desconto em nota',nome:l.nome,hist:'Desconto sobre '+(l.doc?'título '+l.doc+' · ':'')+l.hist,
-        doc:l.doc,parc:l.parc,ocor:'',venc:l.venc,liq:l.liq,val:d,mu:0,ju:0,pg:d,r:d,p:0});
+        doc:l.doc,parc:l.parc,ocor:'',venc:l.venc,liq:l.liq,val:-d,mu:0,ju:0,pg:-d,r:-d,p:0});
     }
 
     // verbas de fornecedores (contas a receber) → categoria Verbas, com sinal negativo (reduz as despesas)
