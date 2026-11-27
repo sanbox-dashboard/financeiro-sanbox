@@ -422,25 +422,24 @@ const VC = { // categorias virtuais (não vêm das contas a pagar)
   'Custos dos produtos':{auto:true},
   'Frete Entrada':{manual:true}, 'Comissões':{manual:true}, 'Custos Marketplaces':{manual:true},
   'Outros Custos / Créditos':{manual:true},
-  'Rebate de comissão':{manual:true}, 'Frete marketplace':{manual:true}, 'Rebate de frete':{manual:true},
+  'Rebate de comissão':{manual:true}, 'Frete pago pela loja':{manual:true}, 'Rebate de frete':{manual:true},
   'Publicidade (Ads)':{manual:true}, 'Cupons do vendedor':{manual:true}, 'Taxas e serviços do canal':{manual:true},
   'Devoluções e mediações':{manual:true}, 'Créditos e ressarcimentos':{manual:true}, 'DIFAL retido pelo canal':{manual:true}
 };
 /* Fechamento da GE Finance por mês e canal (pedidos sem Cancelado e sem Devolução; impostos da GE desconsiderados).
    v = venda total (produtos + frete pago pelo cliente) · c = custo dos produtos · com = comissão · rc = rebate de comissão
-   fr = frete cobrado pelo próprio marketplace (Mercado Envios, Shopee Xpress, FBA) · rf = rebate do frete
-   ft = frete de transportadora própria apontado pela GE (NÃO entra como custo: essas transportadoras já estão no Tiny em
-        Fretes > Frete Venda; serve só para ratear o Frete Venda entre os canais no filtro por canal).
-   Nos meses com fechamento, esses valores substituem o faturamento do Tiny e as linhas de custo/comissão/frete marketplace
-   em Deduções de vendas. */
+   fr = frete pago pela loja, inteiro como na GE (cobrado pelo marketplace + transportadoras próprias) · rf = rebate do frete.
+   No orçamento do Davi as categorias de frete do Tiny (Frete Venda, Frete Compra) ficam fora do resultado, então o frete da
+   GE é o único frete do resultado — não reduzir este valor ao "só marketplace".
+   Nos meses com fechamento, esses valores substituem o faturamento do Tiny e as linhas de custo/comissão/frete em Deduções de vendas. */
 const GE_FECH = {
   '10/2026': {fonte:'GE Finance · fechamento 27/11/2026', canais:{
-    "Mercado Livre":{"v":3214547.23,"c":2104252.35,"com":270516.37,"rc":0.0,"fr":300192.45,"ft":35967.18,"rf":0.0,"n":2151},
-    "Shopee":{"v":822697.32,"c":532147.99,"com":150632.95,"rc":78487.74,"fr":1071.87,"ft":94525.15,"rf":19850.46,"n":762},
-    "Amazon":{"v":925732.63,"c":672749.16,"com":80061.67,"rc":0.0,"fr":139.80,"ft":119676.91,"rf":84167.0,"n":626},
-    "Magazine Luiza":{"v":512163.15,"c":326445.54,"com":77725.45,"rc":25624.54,"fr":0.0,"ft":59596.72,"rf":0.0,"n":359},
-    "Casas Bahia":{"v":487840.05,"c":316658.18,"com":51159.07,"rc":782.31,"fr":0.0,"ft":54493.02,"rf":0.0,"n":347},
-    "Outros":{"v":64949.82,"c":50166.43,"com":0.0,"rc":0.0,"fr":0.0,"ft":6309.51,"rf":0.0,"n":50}}}
+    "Mercado Livre":{"v":3214547.23,"c":2104252.35,"com":270516.37,"rc":0.0,"fr":336159.63,"rf":0.0,"n":2151},
+    "Shopee":{"v":822697.32,"c":532147.99,"com":150632.95,"rc":78487.74,"fr":95597.02,"rf":19850.46,"n":762},
+    "Amazon":{"v":925732.63,"c":672749.16,"com":80061.67,"rc":0.0,"fr":119816.71,"rf":84167.0,"n":626},
+    "Magazine Luiza":{"v":512163.15,"c":326445.54,"com":77725.45,"rc":25624.54,"fr":59596.72,"rf":0.0,"n":359},
+    "Casas Bahia":{"v":487840.05,"c":316658.18,"com":51159.07,"rc":782.31,"fr":54493.02,"rf":0.0,"n":347},
+    "Outros":{"v":64949.82,"c":50166.43,"com":0.0,"rc":0.0,"fr":6309.51,"rf":0.0,"n":50}}}
 };
 /* Custos do Koncili por mês e canal que vão ALÉM do que a GE já traz (comissão e frete do pedido ficam na GE).
    ka = publicidade (Product Ads, Amazon Ads, recarga de ADS) · kc = cupons custeados pelo vendedor · kt = taxas e serviços do canal
@@ -456,7 +455,7 @@ const KONC_FECH = {
     "Outros":{"ka":0,"kc":0,"kt":0,"kd":0,"kr":0,"kf":0}}}
 };
 const KONC_CATS = ['Publicidade (Ads)','Cupons do vendedor','Taxas e serviços do canal','Devoluções e mediações','Créditos e ressarcimentos','DIFAL retido pelo canal'];
-const GE_CAT = {'Custos dos produtos':'c','Comissões':'com','Rebate de comissão':'rc','Frete marketplace':'fr','Rebate de frete':'rf',
+const GE_CAT = {'Custos dos produtos':'c','Comissões':'com','Rebate de comissão':'rc','Frete pago pela loja':'fr','Rebate de frete':'rf',
   'Publicidade (Ads)':'ka','Cupons do vendedor':'kc','Taxas e serviços do canal':'kt','Devoluções e mediações':'kd','Créditos e ressarcimentos':'kr','DIFAL retido pelo canal':'kf'};
 const GE_SIGN = {rc:-1, rf:-1, kr:-1};
 const KONC_K = new Set(['ka','kc','kt','kd','kr','kf']);
@@ -486,12 +485,10 @@ function shareCanal(mk){
   const tot=past?(v.r||0):Math.max(v.r||0,v.p||v.m||0), cn=past?(vc.r||0):Math.max(vc.r||0,vc.p||0);
   return tot ? cn/tot : 0;
 }
-/* fatia do canal no frete de transportadora própria (GE): rateia o Frete Venda do Tiny quando um canal está filtrado */
-function shareFrete(mk){ const g=geMes(mk); if(!g||!ST.canal) return null; const t=Object.values(g.canais).reduce((s,c)=>s+(c.ft||0),0); return t>0 ? ((g.canais[ST.canal]||{}).ft||0)/t : null; }
 function canaisDisponiveis(){ const s=new Set(Object.keys(STATE.vendasCanal||{})); for(const g of Object.values(GE_FECH)) for(const c of Object.keys(g.canais)) s.add(c); return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR')); }
 const SEED = [
   {id:'g_rec',nome:'Receitas complementares',tipo:'receita',cats:['Frete Entrada']},
-  {id:'g_ded',nome:'Deduções da venda',tipo:'deducao',cats:['Impostos Vendas','Frete Transporte','Frete Transporte(nao usar)','Custos dos produtos','Comissões','Rebate de comissão','Frete marketplace','Rebate de frete','Custos Marketplaces']},
+  {id:'g_ded',nome:'Deduções da venda',tipo:'deducao',cats:['Impostos Vendas','Frete Transporte','Frete Transporte(nao usar)','Custos dos produtos','Comissões','Rebate de comissão','Frete pago pela loja','Rebate de frete','Custos Marketplaces']},
   {id:'g_konc',nome:'Koncili',tipo:'deducao',cats:['Publicidade (Ads)','Cupons do vendedor','Taxas e serviços do canal','Devoluções e mediações','Créditos e ressarcimentos','DIFAL retido pelo canal']},
   {id:'g_pes',nome:'Pessoal',tipo:'despesa',cats:['Salario Funcionarios','Decimo Terceiro','Encargos Trabalhistas','Recisoes','Custos de Ferias','Custos Ferias','Vale Alimentacao','Vale Transporte','Plano de Saude','Previdencia','Confraternizacao']},
   {id:'g_soc',nome:'Retirada de sócios',tipo:'despesa',cats:['Retirada Socios','Beneficios Socios']},
@@ -586,7 +583,7 @@ async function garantirCatsExtras(){
   let mud=false;
   if(!CFG.catGroup['Wellhub']){ CFG.catGroup['Wellhub']='g_pes'; mud=true; }
   { const gd=CFG.groups.find(g=>g.id==='g_ded')||CFG.groups.find(g=>g.tipo==='deducao');
-    if(gd) for(const c of ['Comissões','Rebate de comissão','Frete marketplace','Rebate de frete']) if(!CFG.catGroup[c]){ CFG.catGroup[c]=gd.id; mud=true; } }
+    if(gd) for(const c of ['Comissões','Rebate de comissão','Frete pago pela loja','Rebate de frete']) if(!CFG.catGroup[c]){ CFG.catGroup[c]=gd.id; mud=true; } }
   if(!(CFG.fixes||{}).descNota){ const gr=CFG.groups.find(g=>g.id==='g_ded')||CFG.groups.find(g=>g.tipo==='deducao'); if(gr){ CFG.catGroup['Desconto em nota']=gr.id; CFG.fixes=CFG.fixes||{}; CFG.fixes.descNota=1; mud=true; } }
   if(!CFG.catGroup['Beneficios Galpao']){ const gg=CFG.groups.find(g=>g.id==='g_gal'); if(gg){ CFG.catGroup['Beneficios Galpao']=gg.id; mud=true; } }
   // salários da equipe do galpão ficam dentro do grupo Galpão (o grupo "Pessoal Galpão" deixou de existir)
@@ -618,7 +615,15 @@ async function garantirJaKoncili(){
   CFG.catGroup['Amazon Marketplace (cartão)']='g_jkon';
   CFG.fixes.jaKoncili=1; await saveCfg();
 }
-async function loadCfg(){ await loadCfg0(); await garantirCatsExtras(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); await garantirOurocap(); await garantirKoncili(); await garantirJaKoncili(); }
+/* a linha "Frete marketplace" passou a se chamar "Frete pago pela loja" (nome da coluna na GE Finance) */
+async function renomearFretePago(){
+  CFG.fixes=CFG.fixes||{}; if(CFG.fixes.fretePago) return;
+  const de='Frete marketplace', para='Frete pago pela loja';
+  if(CFG.catGroup[de]){ CFG.catGroup[para]=CFG.catGroup[de]; delete CFG.catGroup[de]; }
+  if(CFG.manual&&CFG.manual[de]){ CFG.manual[para]=Object.assign({},CFG.manual[de],CFG.manual[para]||{}); delete CFG.manual[de]; }
+  CFG.fixes.fretePago=1; await saveCfg();
+}
+async function loadCfg(){ await loadCfg0(); await renomearFretePago(); await garantirCatsExtras(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); await garantirOurocap(); await garantirKoncili(); await garantirJaKoncili(); }
 async function loadCfg0(){
   const c=await stGet('orc_cfg');
   if(c && c.groups){ CFG=Object.assign(seedCfg(),c); CFG.ui=Object.assign(seedCfg().ui,c.ui||{});
@@ -957,7 +962,6 @@ function catVal(cat,mk){
   const k=GE_CAT[cat];
   if(k && fechDe(mk,k)) return {r:(GE_SIGN[k]||1)*geVal(mk,k),p:0,n:0,ge:true};
   const x=catVal0(cat,mk); if(!ST.canal) return x;
-  if(cat==='Frete Venda'){ const f=shareFrete(mk); if(f!=null) return {r:(x.r||0)*f,p:(x.p||0)*f,n:x.n||0}; }
   if(cat==='Custos dos produtos'){ const pc=STATE.custosProdCanal||{}; let soma=0; for(const c of Object.keys(pc)) soma+=(pc[c][mk]||0);
     if(soma>0 && soma>=0.9*(x.r||0)) return {r:(pc[ST.canal]||{})[mk]||0,p:0,n:0}; }
   const f=shareCanal(mk); return {r:(x.r||0)*f,p:(x.p||0)*f,n:x.n||0};
@@ -1557,8 +1561,8 @@ function render(){
     `<span class="dot${LIVE?'':' off'}"></span>`+E((LIVE?'Ao vivo · atualizado '+STATE.geradoEm:'Dados embutidos de '+STATE.geradoEm)+' · '+STATE.metaInfo+' · atualiza às 12:00 e 23:40');
   renderAlerts();
   { const el=document.getElementById('canalNote'); const ges=Object.keys(GE_FECH).map(mLabel).join(', ');
-    if(ST.canal){ const f=shareCanal(ST.focus); el.style.display=''; el.innerHTML=`<b>Canal: ${E(ST.canal)}</b> · venda do canal; custo dos produtos, comissão, rebates e frete marketplace do próprio canal pela GE Finance (${E(ges)}) e custos do grupo Koncili do próprio canal (${E(Object.keys(KONC_FECH).map(mLabel).join(', '))}); nos outros meses, custo dos produtos pelos itens vendidos no canal. Frete Venda (transportadoras, Tiny) rateado pelo frete de transportadora de cada canal na GE${shareFrete(ST.focus)!=null?': '+pc1(shareFrete(ST.focus))+' em '+mLabel(ST.focus):''}; os demais custos do Tiny entram proporcionais à venda do canal: ${pc1(f)} em ${mLabel(ST.focus)}. Os lançamentos abertos mostram o valor cheio da empresa.`; }
-    else if(ges){ el.style.display=''; el.innerHTML=`Fechamento de ${E(ges)}: venda, custo dos produtos, comissão, rebates e frete cobrado pelo marketplace vêm da GE Finance (sem cancelados, sem devoluções e sem impostos da GE). Publicidade, cupons, taxas, devoluções, créditos e DIFAL retido pelos canais vêm do Koncili (grupo Koncili). O frete de transportadora continua pelo Tiny (Fretes › Frete Venda). Abra a linha para ver o valor de cada canal, ou filtre em Canal.`; }
+    if(ST.canal){ const f=shareCanal(ST.focus); el.style.display=''; el.innerHTML=`<b>Canal: ${E(ST.canal)}</b> · venda do canal; custo dos produtos, comissão, rebates e frete pago pela loja do próprio canal pela GE Finance (${E(ges)}) e custos do grupo Koncili do próprio canal (${E(Object.keys(KONC_FECH).map(mLabel).join(', '))}); nos outros meses, custo dos produtos pelos itens vendidos no canal. Os custos do Tiny entram proporcionais à venda do canal: ${pc1(f)} em ${mLabel(ST.focus)}. Os lançamentos abertos mostram o valor cheio da empresa.`; }
+    else if(ges){ el.style.display=''; el.innerHTML=`Fechamento de ${E(ges)}: venda, custo dos produtos, comissão, rebates e frete pago pela loja (marketplace e transportadoras) vêm da GE Finance (sem cancelados, sem devoluções e sem impostos da GE). Publicidade, cupons, taxas, devoluções, créditos e DIFAL retido pelos canais vêm do Koncili (grupo Koncili). Abra a linha para ver o valor de cada canal, ou filtre em Canal.`; }
     else el.style.display='none'; }
   renderVendas();
   renderKPIs();
