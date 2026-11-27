@@ -1078,21 +1078,22 @@ const dcell = (cur,prev,up,mk) => {
 
 /* ══════════ VENDAS (topo) ══════════ */
 function renderVendas(){
-  const months=monthsOf(ST.year);
+  const soMes=ST.view==='mes';   // no "Mês detalhado" a faixa de vendas mostra só o mês selecionado
+  const months=soMes?[ST.focus]:monthsOf(ST.year);
   const vc=STATE.vendasCanal||{};
   let h=`<h2>📊 Vendas · faturamento <span class="hint">clique no mês para abrir o orçamento dele · ▶ abre os canais · previsto = meta</span></h2><div class="tablewrap"><table><thead><tr><th class="catcol"></th>`;
   for(const mk of months) h+=`<th colspan="2" class="mh${mk===ST.focus?' focus':''}" data-focus="${mk}">${mLabel(mk)}</th>`;
-  h+=`<th colspan="2">Total</th></tr><tr><th class="catcol" style="text-transform:none"></th>`;
-  for(let i=0;i<=months.length;i++) h+=`<th>Realizado</th><th class="prev">Previsto</th>`;
+  h+=`${soMes?'':'<th colspan="2">Total</th>'}</tr><tr><th class="catcol" style="text-transform:none"></th>`;
+  for(let i=soMes?1:0;i<=months.length;i++) h+=`<th>Realizado</th><th class="prev">Previsto</th>`;
   h+=`</tr></thead><tbody>`;
   const pair=(get)=>{ let s='',tr=0,tp=0;
     for(const mk of months){ const v=get(mk)||{r:0,p:0}; tr+=v.r; tp+=v.p; const f=mk===ST.focus?' focus':'';
       s+=`<td class="num${f}">${mny(v.r)}</td><td class="num prev${f}">${mny(v.p)}</td>`; }
-    return s+`<td class="num"><b>${mny(tr,'0')}</b></td><td class="num prev"><b>${mny(tp,'0')}</b></td>`; };
-  h+=`<tr class="cat vend${ST.openVendas?' open':''}" data-vendas="1"><td class="catcol" style="padding-left:12px"><span class="arrow">▶</span>Vendas<span class="tag auto">AUTOMÁTICO</span></td>${pair(mk=>STATE.vendas[mk])}</tr>`;
+    return soMes?s:s+`<td class="num"><b>${mny(tr,'0')}</b></td><td class="num prev"><b>${mny(tp,'0')}</b></td>`; };
+  h+=`<tr class="cat vend${ST.openVendas?' open':''}" data-vendas="1"><td class="catcol" style="padding-left:12px"><span class="arrow">▶</span>Vendas<span class="tag auto">AUTOMÁTICO</span></td>${pair(mk=>soMes?vendaMes(mk):STATE.vendas[mk])}</tr>`;
   if(ST.openVendas){
     const list=Object.keys(vc).map(cn=>{ let t=0; for(const mk of months){ const v=vc[cn][mk]; if(v) t+=Math.abs(v.r)+Math.abs(v.p); } return {cn,t}; }).filter(x=>x.t>0).sort((a,b)=>b.t-a.t);
-    for(const {cn} of list) h+=`<tr class="con"><td class="catcol" style="padding-left:34px">${E(cn)}</td>${pair(mk=>vc[cn][mk])}</tr>`;
+    for(const {cn} of list) h+=`<tr class="con"><td class="catcol" style="padding-left:34px">${E(cn)}</td>${pair(mk=>{ const g=soMes&&geMes(mk); return g ? {r:(g.canais[cn]||{}).v||0, p:(vc[cn][mk]||{}).p||0} : vc[cn][mk]; })}</tr>`;
   }
   // linha de variação e base do orçamento em %
   let b='',v2='';
@@ -1100,7 +1101,7 @@ function renderVendas(){
     const f=mk===ST.focus?' focus':''; const base=fatBase(mk), pb=fatBase(prevMk(mk));
     b+=`<td class="num${f}" colspan="2" style="text-align:center">${base?nf(base):''}${base&&pb?`<span class="sub">${chip(base,pb,true)}</span>`:''}</td>`;
   }
-  h+=`<tr class="sum"><td class="catcol" style="padding-left:12px" title="Base usada nos orçamentos em % do faturamento: realizado nos meses fechados; meta (ou o realizado, se maior) no mês atual e nos futuros">Base p/ orçamento em % <span class="tag">realizado | meta</span></td>${b}<td colspan="2"></td></tr>`;
+  h+=`<tr class="sum"><td class="catcol" style="padding-left:12px" title="Base usada nos orçamentos em % do faturamento: realizado nos meses fechados; meta (ou o realizado, se maior) no mês atual e nos futuros">Base p/ orçamento em % <span class="tag">realizado | meta</span></td>${b}${soMes?'':'<td colspan="2"></td>'}</tr>`;
   h+=`</tbody></table></div>`;
   const notes=[];
   if((STATE.congelados||[]).length) notes.push(`Vendas de ${STATE.congelados.map(mLabel).join(', ')} vêm do histórico guardado neste arquivo: a planilha de pedidos do Kondado hoje só guarda os meses mais recentes.`);
