@@ -474,13 +474,18 @@ const fechCanalVal = (cat,mk,c) => { const x=(fechCanais(cat,mk)||[]).find(y=>y.
 const META_OVR = { '11/2026': 13000000 };
 /* Mês em andamento sem fechamento: as Deduções de vendas são previstas pelo % que cada linha teve no mês de referência
    (fechado pela GE/Koncili) aplicado sobre o faturamento previsto. Os demais custos seguem a provisão do Tiny. */
-const PREV_DED = { '11/2026': {ref:'10/2026'} };
+/* ge: parcial do próprio mês na GE Finance (pedidos válidos, por canal). Quando existe, custo, comissão, rebates e frete são
+   previstos pelo % da parcial × faturamento previsto; as demais deduções (Koncili, impostos…) seguem o % do mês de referência. */
+const PREV_DED = { '11/2026': {ref:'10/2026', ge:{fonte:'GE Finance · parcial 01 a 24/11/2026', ate:'24/11', canais:{"Mercado Livre":{"v":2421831.07,"c":1544972.0,"com":202838.53,"rc":0.0,"fr":276880.51,"rf":0.0,"n":1751},"Amazon":{"v":4862159.34,"c":3847124.12,"com":281334.24,"rc":0.0,"fr":653268.13,"rf":767372.0,"n":3341},"Shopee":{"v":554303.45,"c":335731.69,"com":105657.89,"rc":50715.42,"fr":62798.24,"rf":12629.79,"n":460},"Magazine Luiza":{"v":399000.15,"c":246141.06,"com":59939.78,"rc":16124.04,"fr":43824.15,"rf":0.0,"n":297},"Casas Bahia":{"v":335926.88,"c":215581.93,"com":36898.13,"rc":0.0,"fr":31608.73,"rf":0.0,"n":234},"Outros":{"v":2080.01,"c":2153.0,"com":0.0,"rc":0.0,"fr":487.13,"rf":0.0,"n":3}}}} };
+function prevGePct(mk,k){ const g=(PREV_DED[mk]||{}).ge; if(!g) return null; const cs=ST.canal?[ST.canal]:Object.keys(g.canais); let n=0,d=0; for(const c of cs){ const x=g.canais[c]; if(x){ n+=x[k]||0; d+=x.v||0; } } return d>0 ? n/d : null; }
 function vendaMes(mk){
   const v0=(STATE.vendas||{})[mk]||{r:0,p:0,m:0}; const ge=geMes(mk); const ov=META_OVR[mk];
   const v=ov?Object.assign({},v0,{p:ov,m:ov}):v0;
   if(!ST.canal) return ge ? Object.assign({},v,{r:geVal(mk,'v')}) : v;
   const vc=((STATE.vendasCanal||{})[ST.canal]||{})[mk]||{r:0,p:0};
-  let pc_=vc.p||0; if(ov){ pc_ = v0.p>0 ? ov*(vc.p||0)/v0.p : ov*shareCanal(mk); }   // meta do canal na mesma proporção da meta original
+  let pc_=vc.p||0; if(ov){ const pg=(PREV_DED[mk]||{}).ge;   // meta do canal: pelo mix da parcial da GE; sem parcial, na proporção da meta original
+    if(pg){ const t=Object.values(pg.canais).reduce((s,c)=>s+(c.v||0),0); pc_ = t ? ov*((pg.canais[ST.canal]||{}).v||0)/t : 0; }
+    else pc_ = v0.p>0 ? ov*(vc.p||0)/v0.p : ov*shareCanal(mk); }
   return {r: ge ? geVal(mk,'v') : (vc.r||0), p: pc_, m: pc_};
 }
 /* fatia do canal na venda do mês: aplicada aos custos que vêm do Tiny quando um canal está filtrado */
@@ -973,6 +978,7 @@ function catVal(cat,mk){
   const x=catValB(cat,mk); const cfg=PREV_DED[mk];
   if(!cfg || isPast(mk) || x.ge) return x;
   if(tipoDe(groupById(groupOfCat(cat))||NONE_G)!=='deducao') return x;
+  { const k=GE_CAT[cat]; if(k && !KONC_K.has(k) && cfg.ge){ const pm=prevGePct(mk,k); if(pm!=null){ const sg=GE_SIGN[k]||1; return {r:x.r||0, p:sg*pm*fatBase(mk)-(x.r||0), n:x.n||0, prv:true, pct:sg*pm, geP:true}; } } }
   // custo dos produtos: acompanha o % que já está acontecendo dentro do próprio mês (custo realizado ÷ venda realizada)
   if(cat==='Custos dos produtos'){ const vr=fatR(mk); if(vr>0 && x.r>0){ const pm=x.r/vr; return {r:x.r, p:pm*fatBase(mk)-x.r, n:x.n||0, prv:true, pct:pm, doMes:true}; } }
   const b0=fatR(cfg.ref), t0=tot(catValB(cat,cfg.ref)); if(!b0 || Math.abs(t0)<0.005) return x;
@@ -1249,7 +1255,7 @@ function renderMes(){
       const v=catVal(cat,mk); const t=tot(v), pt=hp?tot(catVal(cat,pk)):null;
       const vc=VC[cat]; const open=ST.openCats.has(cat);
       const fc=v.ge?fechCanais(cat,mk):null;   // mês com fechamento (GE Finance / Koncili): valor fixo, abre por canal
-      const tags=fc?`<span class="tag auto" title="Valor do fechamento do mês; clique para ver por canal">${fechNome(GE_CAT[cat])}</span>`:v.prv?`<span class="tag auto" title="Previsto = ${v.doMes?'% que o custo já representa da venda realizada do próprio mês':'% desta linha em '+mLabel(PREV_DED[mk].ref)} × faturamento previsto do mês">${pc1(v.pct)} ${v.doMes?'do próprio mês':'de '+mLabel(PREV_DED[mk].ref)}</span>`:(vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):'');
+      const tags=fc?`<span class="tag auto" title="Valor do fechamento do mês; clique para ver por canal">${fechNome(GE_CAT[cat])}</span>`:v.prv?`<span class="tag auto" title="Previsto = ${v.geP?'% desta linha na parcial da GE Finance do próprio mês (até '+PREV_DED[mk].ge.ate+')':v.doMes?'% que o custo já representa da venda realizada do próprio mês':'% desta linha em '+mLabel(PREV_DED[mk].ref)} × faturamento previsto do mês">${pc1(v.pct)} ${v.geP?'GE até '+PREV_DED[mk].ge.ate:v.doMes?'do próprio mês':'de '+mLabel(PREV_DED[mk].ref)}</span>`:(vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):'');
       const nLines=((M.lines[cat+'\u0001'+mk])||[]).length;
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true">
         <td class="catcol">${vc&&vc.manual&&!fc&&!v.prv?'':`<span class="arrow">▶</span>`}${E(cat)}${tags}${nLines?`<span class="tag">${nLines} lanç.</span>`:''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
@@ -1260,7 +1266,7 @@ function renderMes(){
           if(!fc.length) h+=`<tr class="con"><td class="catcol">— sem valor ${ST.canal?'neste canal':'neste mês'}</td><td colspan="7"></td></tr>`;
           for(const x of fc) h+=`<tr class="con"><td class="catcol">${E(x.c)}</td><td class="num">${mny2(x.v)}</td><td class="num prev"></td><td class="num">${mny2(x.v)}</td><td class="num mut" title="% sobre a venda do próprio canal">${x.venda?pc1(x.v/x.venda):''}</td><td colspan="3"></td></tr>`;
         }
-        else if(v.prv&&vc) h+=`<tr class="con"><td class="catcol">Previsão: ${pc1(v.pct)} (${v.doMes?'custo realizado ÷ venda realizada do próprio mês':'peso desta linha em '+mLabel(PREV_DED[mk].ref)}) × faturamento previsto de ${mLabel(mk)} (R$ ${nf(fatBase(mk))})${vc.auto?'. Realizado: itens vendidos × custo médio.':'.'}</td><td colspan="7"></td></tr>`;
+        else if(v.prv&&vc) h+=`<tr class="con"><td class="catcol">Previsão: ${pc1(v.pct)} (${v.geP?'peso desta linha na parcial da GE Finance até '+PREV_DED[mk].ge.ate:v.doMes?'custo realizado ÷ venda realizada do próprio mês':'peso desta linha em '+mLabel(PREV_DED[mk].ref)}) × faturamento previsto de ${mLabel(mk)} (R$ ${nf(fatBase(mk))})${vc.auto?'. Realizado: itens vendidos × custo médio.':'.'}</td><td colspan="7"></td></tr>`;
         else if(vc&&vc.auto) h+=`<tr class="con"><td class="catcol">Calculado automaticamente: itens dos pedidos válidos do mês × custo médio do produto (sem lançamentos individuais).</td><td colspan="7"></td></tr>`;
         else {
           const lines=((M.lines[cat+'\u0001'+mk])||[]).slice().sort(lineSorter(ST.sort));
