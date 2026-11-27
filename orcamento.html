@@ -1077,6 +1077,18 @@ const dcell = (cur,prev,up,mk) => {
 };
 
 /* ══════════ VENDAS (topo) ══════════ */
+/* venda de um canal no mês: fechamento da GE quando existe; senão, Tiny */
+function vendaCanalMes(cn,mk){ const g=geMes(mk); const x=((STATE.vendasCanal||{})[cn]||{})[mk]||{r:0,p:0}; return {r: g ? ((g.canais[cn]||{}).v||0) : (x.r||0), p:x.p||0}; }
+function canaisVenda(mks){ const cs=ST.canal?[ST.canal]:canaisDisponiveis(); return cs.map(cn=>({cn,t:mks.reduce((s,mk)=>{ const v=vendaCanalMes(cn,mk); return s+Math.abs(v.r)+Math.abs(v.p); },0)})).filter(x=>x.t>0).sort((a,b)=>b.t-a.t).map(x=>x.cn); }
+const vendHead = () => `<span class="arrow" style="${ST.openVendas?'transform:rotate(90deg)':''}">▶</span>Vendas<span class="tag auto">AUTOMÁTICO</span>`;
+/* Mês detalhado: vendas como primeira linha da tabela, nas mesmas colunas dos custos */
+function vendasRowsMes(mk,pk,hp){
+  const r=fatR(mk), p=metaV(mk), b=fatBase(mk), pb=hp?fatBase(pk):null;
+  let h=`<tr class="cat vend" data-vendas="1"><td class="catcol">${vendHead()}</td><td class="num">${mny(r,'0')}</td><td class="num prev">${mny(p)}</td><td class="num">${mny(b,'0')}</td><td class="num" title="Realizado sobre a meta">${p&&r?pc1(r/p):''}</td><td class="num">${mny(pb)}</td>${dcell(b,pb,true,mk)}</tr>`;
+  if(ST.openVendas) for(const cn of canaisVenda([mk,pk])){ const v=vendaCanalMes(cn,mk), pv=hp?vendaCanalMes(cn,pk).r:null;
+    h+=`<tr class="con"><td class="catcol">${E(cn)}</td><td class="num">${mny(v.r)}</td><td class="num prev">${mny(v.p)}</td><td class="num">${mny(v.r,'0')}</td><td class="num mut" title="Participação na venda do mês">${fatR(mk)&&!ST.canal?pc1(v.r/fatR(mk)):''}</td><td class="num mut">${mny(pv)}</td>${dcell(v.r,pv,true,mk)}</tr>`; }
+  return h;
+}
 function renderVendas(){
   const soMes=ST.view==='mes';   // no "Mês detalhado" a faixa de vendas mostra só o mês selecionado
   const months=soMes?[ST.focus]:monthsOf(ST.year);
@@ -1104,7 +1116,6 @@ function renderVendas(){
   h+=`<tr class="sum"><td class="catcol" style="padding-left:12px" title="Base usada nos orçamentos em % do faturamento: realizado nos meses fechados; meta (ou o realizado, se maior) no mês atual e nos futuros">Base p/ orçamento em % <span class="tag">realizado | meta</span></td>${b}${soMes?'':'<td colspan="2"></td>'}</tr>`;
   h+=`</tbody></table></div>`;
   const notes=[];
-  if((STATE.congelados||[]).length) notes.push(`Vendas de ${STATE.congelados.map(mLabel).join(', ')} vêm do histórico guardado neste arquivo: a planilha de pedidos do Kondado hoje só guarda os meses mais recentes.`);
   if(notes.length) h+=`<div class="note" style="margin:6px 14px 8px">${E(notes.join(' '))}</div>`;
   document.getElementById('vendasCard').innerHTML=h;
 }
@@ -1196,6 +1207,7 @@ function renderMes(){
   const mk=ST.focus, pk=prevMk(mk), base=fatBase(mk); const hp=mkOrd(pk)>='202601';
   const gs=orderedGroups();
   let h=`<table><thead><tr><th class="catcol">${mLong(mk)} — realizado × previsto${isPast(mk)?'':'<div style="font-size:11px;font-weight:400;color:var(--mut)">mês em andamento: compara só o que já foi lançado até agora</div>'}</th><th>Realizado</th><th class="prev">Previsto</th><th>Total</th><th>% s/ fat.</th><th>${hp?mLabel(pk):'mês ant.'}</th><th>Δ R$</th><th>Δ %</th></tr></thead><tbody>`;
+  h+=vendasRowsMes(mk,pk,hp);
   const loopG=(gs)=>{ let curP=null;
   for(const g of gs){
     const tp=tipoDe(g);
@@ -1305,6 +1317,10 @@ function renderComp(){
       if(v!=null){ sum+=v; if(Math.abs(v)>0.005) n++; } if(isPct){ stt+=aggP(tp,mk,gs).t; sb+=fatBase(mk); } }
     s+= isPct ? `<td class="num"><b>${sb?pc1(stt/sb):'—'}</b></td>` : `<td class="num"><b>${mny(sum,'0')}</b></td><td class="num">${n?mny(sum/n):''}</td>`;
     return s; };
+  { const vv=(get)=>{ let s='',sum=0,n=0; for(const mk of months){ const v=get(mk); s+=`<td class="num${mk===ST.focus?' focus':''}">${isPct?(v?'100,0%':''):mny(v)}</td>`; sum+=v||0; if(Math.abs(v||0)>0.005) n++; } return s+(isPct?'<td></td>':`<td class="num"><b>${mny(sum,'0')}</b></td><td class="num">${n?mny(sum/n):''}</td>`); };
+    const pick=(r,p,b)=>kind==='r'?r:(kind==='p'?p:b);
+    h+=`<tr class="cat vend" data-vendas="1"><td class="catcol">${vendHead()}</td>${vv(mk=>pick(fatR(mk),metaV(mk),fatBase(mk)))}</tr>`;
+    if(ST.openVendas && !isPct) for(const cn of canaisVenda(months)) h+=`<tr class="con"><td class="catcol">${E(cn)}</td>${vv(mk=>{ const v=vendaCanalMes(cn,mk); return pick(v.r,v.p,v.r); })}</tr>`; }
   const loopG=(gs)=>{ let curP=null;
   for(const g of gs){
     const tp=tipoDe(g);
@@ -1578,7 +1594,7 @@ function render(){
   for(const [id,v] of [['tabGeral','geral'],['tabMes','mes'],['tabTri','tri'],['tabComp','comp']]) document.getElementById(id).classList.toggle('on',V===v);
   const dsp=(id,on,d='flex')=>document.getElementById(id).style.display=on?d:'none';
   dsp('ctlMes',V==='mes'); dsp('ctlComp',V==='comp'); dsp('ctlFocus',V==='geral'||V==='mes'); dsp('ctlTri',V==='tri'); dsp('kpis',V!=='tri','grid'); dsp('secKpi',V!=='tri'); if(V==='tri') fillTri(); dsp('lblEmpty',V!=='geral','inline-flex');
-  dsp('app',V!=='geral','block'); dsp('secDet',V!=='geral'); dsp('secVendas',V!=='tri'); dsp('vendasCard',V!=='tri','block');
+  dsp('app',V!=='geral','block'); dsp('secDet',false); dsp('secVendas',V==='geral'); dsp('vendasCard',V==='geral','block');
   document.getElementById('detHint').textContent = V==='mes' ? 'clique numa categoria para abrir os lançamentos · arraste para outro grupo ou use ↪' : (V==='tri' ? 'o ▲▼ compara cada mês com a coluna à esquerda · clique numa categoria para ver os contatos, num valor para ver os lançamentos' : 'variação de cada mês contra o anterior');
   fillFocus();
   if(DR) renderDrawer();
@@ -1768,6 +1784,7 @@ function moveCat(cat,gid){
 /* ══════════ EVENTOS ══════════ */
 const app=document.getElementById('app');
 app.addEventListener('click',e=>{
+  if(e.target.closest('tr[data-vendas]')){ ST.openVendas=!ST.openVendas; render(); return; }
   if(e.target.tagName==='INPUT') return;
   const edit=e.target.closest('[data-gedit]'); if(edit && edit.dataset.gedit){ e.stopPropagation(); openGroupEditor(edit.dataset.gedit, edit.dataset.gmk||(ST.view==='mes'?ST.focus:null)); return; }
   const ap=e.target.closest('[data-addprev]'); if(ap){ e.stopPropagation();
