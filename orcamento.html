@@ -1005,7 +1005,7 @@ function buildBuckets(){
 const orderedGroups = () => { const l=[...CFG.groups]; if((BUCKET._none||[]).some(c=>catHasData(c))) l.push(NONE_G);
   return l.map((g,i)=>({g,i})).sort((a,b)=>TIPO_ORD.indexOf(tipoDe(a.g))-TIPO_ORD.indexOf(tipoDe(b.g))||a.i-b.i).map(x=>x.g); };
 const groupsDoPai = (tp,gs) => (gs||orderedGroups()).filter(g=>tipoDe(g)===tp);
-function aggP(tp,mk,gs){ let r=0,p=0,t=0; for(const g of groupsDoPai(tp,gs)){ const a=aggG(g.id,mk); r+=a.r; p+=a.p; t+=a.t; } return {r,p,t}; }
+function aggP(tp,mk,gs){ let r=0,p=0,t=0,dp=0; for(const g of groupsDoPai(tp,gs)){ const a=aggG(g.id,mk); r+=a.r; p+=a.p; t+=a.t; dp+=a.dp; } return {r,p,t,dp}; }
 function orcP(tp,mk,gs){ let s=0,n=0; for(const g of groupsDoPai(tp,gs)){ if(g.virtual) continue; const o=orcado(g,mk); if(o!=null){ s+=o; n++; } } return n?s:null; }
 const nGr = (tp,gs) => { const n=groupsDoPai(tp,gs).length; return n+(n===1?' grupo':' grupos'); };
 const pvR = (v,mk) => { const b=fatR(mk); return b&&v?`<span class="pv" title="% sobre a venda realizada do mês">${pc1(v/b)}</span>`:''; };
@@ -1036,10 +1036,13 @@ function prevGrupo(g,mk){
   const val=has?pnum(ov):pnum(o.base);
   return o.modo==='pct' ? fatBase(mk)*val/100 : val;
 }
+/* valor mostrado na coluna Previsto: nas linhas projetadas por % (mês em andamento) é a projeção inteira do mês, como na linha de Vendas;
+   nas demais, o que ainda está em aberto. O Total não muda (projeção, ou realizado + em aberto). */
+const dpv = v => v.prv ? (v.r||0)+(v.p||0) : (v.p||0);
 function aggG(gid,mk,raw){
-  let r=0,p=0; for(const c of BUCKET[gid]||[]){ const v=catVal(c,mk); r+=v.r; p+=v.p; }
-  if(!raw){ const pg=prevGrupo(groupById(gid),mk); if(pg!=null) return {r,p:Math.max(0,pg-r),t:r+Math.max(0,pg-r),ov:true,pl:p,pg}; }
-  return {r,p,t:r+p};
+  let r=0,p=0,d=0; for(const c of BUCKET[gid]||[]){ const v=catVal(c,mk); r+=v.r; p+=v.p; d+=dpv(v); }
+  if(!raw){ const pg=prevGrupo(groupById(gid),mk); if(pg!=null){ const pp=Math.max(0,pg-r); return {r,p:pp,dp:pp,t:r+pp,ov:true,pl:p,pg}; } }
+  return {r,p,dp:d,t:r+p};
 }
 const gpTag = a => a&&a.ov ? `<span class="sub gpv" title="Previsto total do grupo digitado (${fmt0.format(a.pg)}) − realizado. A previsão lançamento a lançamento (${fmt0.format(a.pl)}) é ignorada neste mês.">✎ total do grupo</span>` : '';
 const gpTitle = (g,mk) => g.virtual ? '' : ` data-gedit="${g.id}" data-gmk="${mk}" title="Clique para lançar o previsto total do grupo neste mês"`;
@@ -1229,7 +1232,7 @@ function renderMes(){
   for(const g of gs){
     const tp=tipoDe(g);
     if(tp!==curP){ curP=tp; const pa=aggP(tp,mk,gs), pp=hp?aggP(tp,pk,gs):{t:null}, po=orcP(tp,mk,gs); const pc=po?pa.t/po:null; const pov=po!=null&&pa.t>po+0.5;
-      h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td><td class="num">${mny(pa.r)}${pvR(pa.r,mk)}</td><td class="num prev">${mny(pa.p)}${pvP(pa.p,mk)}</td><td class="num">${mny(pa.t,'0')}</td><td class="num">${base?pc1(pa.t/base):'—'}</td><td class="num">${mny(pp.t)}</td>${dcell(pa.t,pp.t,goodUp(tp),mk)}`); }
+      h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td><td class="num">${mny(pa.r)}${pvR(pa.r,mk)}</td><td class="num prev">${mny(pa.dp)}${pvP(pa.dp,mk)}</td><td class="num">${mny(pa.t,'0')}</td><td class="num">${base?pc1(pa.t/base):'—'}</td><td class="num">${mny(pp.t)}</td>${dcell(pa.t,pp.t,goodUp(tp),mk)}`); }
     if(parCollapsed(tp)) continue;
     const flat=flatGrp(g,gs), hLen=h.length;
     const up=goodUp(g.tipo); const a=aggG(g.id,mk), pa=hp?aggG(g.id,pk):{t:null};
@@ -1238,7 +1241,7 @@ function renderMes(){
     const consumo=o?a.t/o:null; const over=o!=null&&a.t>o+0.5;
     const tagOrc = g.virtual ? '' : `<span class="tag orc" data-gedit="${g.id}" data-gmk="${mk}" title="Lançar o previsto total do grupo por mês">${a.ov?'previsto do grupo':'lançar previsto do grupo'}</span>`;
     h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}${obsOf(g,mk)?`<div class="gobs">📝 ${E(obsOf(g,mk))}</div>`:''}</td>
-      <td class="num">${mny(a.r)}${pcs(a.r,fatR(mk))}</td><td class="num prev${g.virtual?'':' clk'}"${gpTitle(g,mk)}>${mny(a.p)}${gpTag(a)}${pcs(a.p,fatP(mk))}</td><td class="num"><b>${mny(a.t,'0')}</b></td>
+      <td class="num">${mny(a.r)}${pcs(a.r,fatR(mk))}</td><td class="num prev${g.virtual?'':' clk'}"${gpTitle(g,mk)}>${mny(a.dp)}${gpTag(a)}${pcs(a.dp,fatP(mk))}</td><td class="num"><b>${mny(a.t,'0')}</b></td>
       <td class="num">${base?pc1(a.t/base):'—'}</td>
       <td class="num mut">${mny(pa.t)}</td>${dcell(a.t,pa.t,up,mk)}</tr>`;
     if(flat) h=h.slice(0,hLen); else if(collapsed) continue;
@@ -1251,7 +1254,7 @@ function renderMes(){
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true">
         <td class="catcol">${vc&&vc.manual&&!fc&&!v.prv?'':`<span class="arrow">▶</span>`}${E(cat)}${tags}${nLines?`<span class="tag">${nLines} lanç.</span>`:''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
       if(vc&&vc.manual&&!fc&&!v.prv){ h+=manualInputs(cat,mk)+`<td class="num"><b>${mny(t,'0')}</b></td><td class="num mut">${base&&t?pc1(t/base):''}</td><td class="num mut">${mny(pt)}</td>${dcell(t,pt,up,mk)}</tr>`; continue; }
-      h+=`<td class="num">${mny(v.r)}${pcs(v.r,fatR(mk))}</td><td class="num prev${v.pd?' edt':''}"${v.pd?` title="inclui ajuste manual de previsão: ${v.pd>0?'+':''}${fmt2.format(v.pd)}"`:''}>${mny(v.p)}${pcs(v.p,fatP(mk))}</td><td class="num"><b>${mny(t,'0')}</b></td><td class="num mut">${base&&t?pc1(t/base):''}</td><td class="num mut">${mny(pt)}</td>${dcell(t,pt,up,mk)}</tr>`;
+      h+=`<td class="num">${mny(v.r)}${pcs(v.r,fatR(mk))}</td><td class="num prev${v.pd?' edt':''}"${v.pd?` title="inclui ajuste manual de previsão: ${v.pd>0?'+':''}${fmt2.format(v.pd)}"`:''}>${mny(dpv(v))}${pcs(dpv(v),fatP(mk))}</td><td class="num"><b>${mny(t,'0')}</b></td><td class="num mut">${base&&t?pc1(t/base):''}</td><td class="num mut">${mny(pt)}</td>${dcell(t,pt,up,mk)}</tr>`;
       if(open){
         if(fc){
           if(!fc.length) h+=`<tr class="con"><td class="catcol">— sem valor ${ST.canal?'neste canal':'neste mês'}</td><td colspan="7"></td></tr>`;
@@ -1295,7 +1298,7 @@ function renderMes(){
 function metricVal(kind,g,cat,mk){ // g: grupo | null ; cat: categoria | null
   const a = cat ? catVal(cat,mk) : aggG(g.id,mk); const t=tot(a);
   switch(kind){
-    case 'r': return a.r; case 'p': return a.p;
+    case 'r': return a.r; case 'p': return cat ? dpv(a) : a.dp;
     case 'pct': { const b=fatBase(mk); return b?t/b:null; }
     case 'orc': return (!cat&&g&&!g.virtual) ? orcado(g,mk) : null;
     case 'saldo': { if(cat||!g||g.virtual) return null; const o=orcado(g,mk); return o==null?null:o-t; }
@@ -1329,7 +1332,7 @@ function renderComp(){
     return s;
   };
   const parCells=(tp)=>{ let s='',sum=0,n=0,sb=0,stt=0; const up=goodUp(tp);
-    const val=mk=>{ const a=aggP(tp,mk,gs); switch(kind){ case 'r': return a.r; case 'p': return a.p; case 'pct': { const b=fatBase(mk); return b?a.t/b:null; } case 'orc': return orcP(tp,mk,gs); case 'saldo': { const o=orcP(tp,mk,gs); return o==null?null:o-a.t; } default: return a.t; } };
+    const val=mk=>{ const a=aggP(tp,mk,gs); switch(kind){ case 'r': return a.r; case 'p': return a.dp; case 'pct': { const b=fatBase(mk); return b?a.t/b:null; } case 'orc': return orcP(tp,mk,gs); case 'saldo': { const o=orcP(tp,mk,gs); return o==null?null:o-a.t; } default: return a.t; } };
     for(const mk of months){ const v=val(mk); const pv=mkOrd(prevMk(mk))>='202601'?val(prevMk(mk)):null;
       s+=`<td class="num${mk===ST.focus?' focus':''}">${v==null?'':(isPct?pc1(v):mny(v))}${kind==='r'?pvR(v,mk):kind==='p'?pvP(v,mk):''}${v!=null&&pv!=null&&!(!isPast(mk)&&Math.abs(v)<0.0005)?`<span class="sub">${chip(v,pv,up,isPct)}</span>`:''}</td>`;
       if(v!=null){ sum+=v; if(Math.abs(v)>0.005) n++; } if(isPct){ stt+=aggP(tp,mk,gs).t; sb+=fatBase(mk); } }
@@ -1435,7 +1438,7 @@ function renderTri(){
   for(const g of gs){
     const tp=tipoDe(g);
     if(tp!==curP){ curP=tp; let s=''; months.forEach((mk,i)=>{ const a=aggP(tp,mk,gs), o=orcP(tp,mk,gs); const c=o?a.t/o:null;
-        s+=`<td class="num ms">${mny(a.r)}${pvR(a.r,mk)}</td><td class="num prev">${mny(a.p)}${pvP(a.p,mk)}</td><td class="num"><b>${mny(a.t,'0')}</b>${i?`<span class="sub">${chip(a.t,aggP(tp,months[i-1],gs).t,goodUp(tp))}</span>`:''}</td>`; });
+        s+=`<td class="num ms">${mny(a.r)}${pvR(a.r,mk)}</td><td class="num prev">${mny(a.dp)}${pvP(a.dp,mk)}</td><td class="num"><b>${mny(a.t,'0')}</b>${i?`<span class="sub">${chip(a.t,aggP(tp,months[i-1],gs).t,goodUp(tp))}</span>`:''}</td>`; });
       h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td>${s}`); }
     if(parCollapsed(tp)) continue;
     const flat=flatGrp(g,gs), hLen=h.length;
@@ -1444,7 +1447,7 @@ function renderTri(){
     h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}${months.map(m=>obsOf(g,m)?`<div class="gobs">📝 ${mLabel(m)}: ${E(obsOf(g,m))}</div>`:'').join('')}</td>`;
     months.forEach((mk,i)=>{
       const a=aggG(g.id,mk);
-      h+=`<td class="num ms">${mny(a.r)}${pcs(a.r,fatR(mk))}</td><td class="num prev${g.virtual?'':' clk'}"${gpTitle(g,mk)}>${mny(a.p)}${gpTag(a)}${obsOf(g,mk)?`<span class="sub" title="${E(obsOf(g,mk))}">📝</span>`:''}${pcs(a.p,fatP(mk))}</td>
+      h+=`<td class="num ms">${mny(a.r)}${pcs(a.r,fatR(mk))}</td><td class="num prev${g.virtual?'':' clk'}"${gpTitle(g,mk)}>${mny(a.dp)}${gpTag(a)}${obsOf(g,mk)?`<span class="sub" title="${E(obsOf(g,mk))}">📝</span>`:''}${pcs(a.p,fatP(mk))}</td>
         <td class="num clk" data-open="g:${g.id}" data-mk="${mk}"><b>${mny(a.t,'0')}</b>${chipT(i,a.t,up,m=>aggG(g.id,m).t)}</td>`;
     });
     h+=`</tr>`;
@@ -1454,7 +1457,7 @@ function renderTri(){
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true"><td class="catcol"><span class="arrow">▶</span>${E(cat)}${vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
       months.forEach((mk,i)=>{
         const v=catVal(cat,mk), t=tot(v); const b=fatBase(mk);
-        h+=`<td class="num ms">${mny(v.r)}${pcs(v.r,fatR(mk))}</td><td class="num prev${v.pd?' edt':''}"${v.pd?` title="inclui ajuste manual de previsão: ${v.pd>0?'+':''}${fmt2.format(v.pd)}"`:''}>${mny(v.p)}${pcs(v.p,fatP(mk))}</td>
+        h+=`<td class="num ms">${mny(v.r)}${pcs(v.r,fatR(mk))}</td><td class="num prev${v.pd?' edt':''}"${v.pd?` title="inclui ajuste manual de previsão: ${v.pd>0?'+':''}${fmt2.format(v.pd)}"`:''}>${mny(dpv(v))}${pcs(dpv(v),fatP(mk))}</td>
           <td class="num ${vc&&vc.auto?'':'clk'}"${vc?'':` data-open="c:${E(cat)}" data-mk="${mk}"`}><b>${mny(t,'0')}</b>${t||tot(catVal(cat,months[i-1]||mk))?chipT(i,t,up,m=>tot(catVal(cat,m))):''}</td>`;
       });
       h+=`</tr>`;
