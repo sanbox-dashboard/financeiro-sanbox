@@ -714,7 +714,8 @@ async function liveUpdate(trigger){
         doc:l.doc,parc:l.parc,ocor:'',venc:l.venc,liq:l.liq,val:-d,mu:0,ju:0,pg:-d,r:-d,p:0});
     }
 
-    // verbas de fornecedores (contas a receber) → categoria Verbas, com sinal negativo (reduz as despesas)
+    // verbas de fornecedores (contas a receber) → categoria Verbas. Nascem negativas (abatem despesa); o buildModel inverte o sinal
+    // quando a categoria está num grupo de Receitas complementares (ver "Créditos sintéticos").
     if(recCols){
       const [rid,rsit,rcomp,rvenc,rliq,rval,rpag,rnome,rcat,rhist]=recCols;
       for(let i=1;i<rid.length;i++){
@@ -941,6 +942,9 @@ function buildModel(){
     // então a partir de out/26 o pagamento no cartão sai do resultado (grupo "Já lançado pelo Koncili", em Fora do resultado).
     if(!catManual && mkOrd(ecomp)>=AMZ_CARTAO_DESDE && /^amazon marketplace/.test(semAcento(l.nome))) ecat=AMZ_CARTAO_CAT;
     const it=Object.assign({},l,{ecat,ecomp,moved});
+    // Créditos sintéticos (verba de fornecedor "R…" e desconto em nota "D…") nascem negativos, para abater custo num grupo de despesa/dedução.
+    // Se a categoria estiver num grupo de Receitas complementares, entram positivos: lá o valor SOMA ao resultado.
+    if(/^[RD]\d/.test(String(l.id)) && tipoDe(groupById(groupOfCat(ecat))||NONE_G)==='receita'){ it.val=-it.val; it.pg=-it.pg; it.r=-it.r; it.p=-it.p; }
     M.byId[l.id]=it; M.catsData.add(ecat);
     const cm=(M.cat[ecat]=M.cat[ecat]||{}); const c=(cm[ecomp]=cm[ecomp]||{r:0,p:0,n:0}); c.r+=it.r; c.p+=it.p; c.n++;
     const nm=(M.con[ecat]=M.con[ecat]||{}); const ncm=(nm[it.nome]=nm[it.nome]||{}); const cc=(ncm[ecomp]=ncm[ecomp]||{r:0,p:0,n:0}); cc.r+=it.r; cc.p+=it.p; cc.n++;
