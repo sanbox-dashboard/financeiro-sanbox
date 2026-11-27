@@ -507,6 +507,7 @@ const SEED = [
   {id:'g_dist',nome:'Distribuição de lucros',tipo:'distrib',cats:['Distribuição de lucros']},
   {id:'g_impo',nome:'Importação',tipo:'fora',cats:['Importacao']},
   {id:'g_ouro',nome:'Ourocap',tipo:'fora',cats:['Ourocap']},
+  {id:'g_jkon',nome:'Já lançado pelo Koncili',tipo:'fora',cats:['Amazon Marketplace (cartão)']},
   {id:'g_forn',nome:'Fornecedores (fora do resultado)',tipo:'fora',cats:['Fornecedores']}
 ];
 /* ══════════ ORÇAMENTO SUGERIDO PELO ANALISTA (aplicado só em grupos ainda sem orçamento) ══════════ */
@@ -609,7 +610,15 @@ async function garantirKoncili(){
   for(const c of KONC_CATS) CFG.catGroup[c]='g_konc';
   CFG.fixes.koncili=1; await saveCfg();
 }
-async function loadCfg(){ await loadCfg0(); await garantirCatsExtras(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); await garantirOurocap(); await garantirKoncili(); }
+/* grupo "Já lançado pelo Koncili" (Fora do resultado): pagamentos que duplicariam custos que o Koncili já traz */
+async function garantirJaKoncili(){
+  CFG.fixes=CFG.fixes||{}; if(CFG.fixes.jaKoncili) return;
+  if(!CFG.groups.some(g=>g.id==='g_jkon')){ const i=CFG.groups.findIndex(g=>g.id==='g_forn'); const g={id:'g_jkon',nome:'Já lançado pelo Koncili',tipo:'fora',orc:{modo:'none',base:'',meses:{}}};
+    if(i<0) CFG.groups.push(g); else CFG.groups.splice(i,0,g); }
+  CFG.catGroup['Amazon Marketplace (cartão)']='g_jkon';
+  CFG.fixes.jaKoncili=1; await saveCfg();
+}
+async function loadCfg(){ await loadCfg0(); await garantirCatsExtras(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); await garantirOurocap(); await garantirKoncili(); await garantirJaKoncili(); }
 async function loadCfg0(){
   const c=await stGet('orc_cfg');
   if(c && c.groups){ CFG=Object.assign(seedCfg(),c); CFG.ui=Object.assign(seedCfg().ui,c.ui||{});
@@ -908,6 +917,7 @@ const AUTO_RECLASS = [
   ['salario kennedy eric','Salario Funcionarios Galpao'],
   ['salario washington jose de oliveira junior','Salario Funcionarios Galpao']
 ];
+const AMZ_CARTAO_CAT='Amazon Marketplace (cartão)', AMZ_CARTAO_DESDE='202610';
 /* ══════════ MODELO (agregações) ══════════ */
 let M={cat:{},con:{},lines:{},catsData:new Set(),byId:{}};
 function buildModel(){
@@ -918,9 +928,13 @@ function buildModel(){
     const mv=CFG.lineMoves[l.id];
     { const nn=semAcento(l.nome); const rr=AUTO_RECLASS.find(x=>nn.startsWith(x[0])); if(rr) ecat=rr[1];
       if(BENEF_CATS.has(ecat) && ehBenefES(l)) ecat='Beneficios Galpao'; }   // "Mover" com categoria escolhida à mão vence (abaixo)
-    if(mv){ if(mv.cat) ecat=mv.cat; if(mv.comp) ecomp=mv.comp; moved=true; }
+    let catManual=false;
+    if(mv){ if(mv.cat){ ecat=mv.cat; catManual=true; } if(mv.comp) ecomp=mv.comp; moved=true; }
     else if(rules.length){ const n60=l.nome.slice(0,60);
-      for(const r of rules){ if(r.cat===l.cat&&r.de===l.comp&&r.nome===n60){ ecat=r.paraCat; ecomp=r.para; moved=true; break; } } }
+      for(const r of rules){ if(r.cat===l.cat&&r.de===l.comp&&r.nome===n60){ ecat=r.paraCat; ecomp=r.para; moved=true; catManual=true; break; } } }
+    // Saldo devedor da conta Amazon cobrado no cartão ("Amazon Marketplace"): a despesa já entra pelo Koncili (publicidade e taxas do canal),
+    // então a partir de out/26 o pagamento no cartão sai do resultado (grupo "Já lançado pelo Koncili", em Fora do resultado).
+    if(!catManual && mkOrd(ecomp)>=AMZ_CARTAO_DESDE && /^amazon marketplace/.test(semAcento(l.nome))) ecat=AMZ_CARTAO_CAT;
     const it=Object.assign({},l,{ecat,ecomp,moved});
     M.byId[l.id]=it; M.catsData.add(ecat);
     const cm=(M.cat[ecat]=M.cat[ecat]||{}); const c=(cm[ecomp]=cm[ecomp]||{r:0,p:0,n:0}); c.r+=it.r; c.p+=it.p; c.n++;
