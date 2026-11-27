@@ -973,6 +973,8 @@ function catVal(cat,mk){
   const x=catValB(cat,mk); const cfg=PREV_DED[mk];
   if(!cfg || isPast(mk) || x.ge) return x;
   if(tipoDe(groupById(groupOfCat(cat))||NONE_G)!=='deducao') return x;
+  // custo dos produtos: acompanha o % que já está acontecendo dentro do próprio mês (custo realizado ÷ venda realizada)
+  if(cat==='Custos dos produtos'){ const vr=fatR(mk); if(vr>0 && x.r>0){ const pm=x.r/vr; return {r:x.r, p:pm*fatBase(mk)-x.r, n:x.n||0, prv:true, pct:pm, doMes:true}; } }
   const b0=fatR(cfg.ref), t0=tot(catValB(cat,cfg.ref)); if(!b0 || Math.abs(t0)<0.005) return x;
   const total=t0/b0*fatBase(mk);   // % da linha no mês de referência × faturamento previsto
   return {r:x.r||0, p:total-(x.r||0), n:x.n||0, prv:true, pct:t0/b0};
@@ -1244,7 +1246,7 @@ function renderMes(){
       const v=catVal(cat,mk); const t=tot(v), pt=hp?tot(catVal(cat,pk)):null;
       const vc=VC[cat]; const open=ST.openCats.has(cat);
       const fc=v.ge?fechCanais(cat,mk):null;   // mês com fechamento (GE Finance / Koncili): valor fixo, abre por canal
-      const tags=fc?`<span class="tag auto" title="Valor do fechamento do mês; clique para ver por canal">${fechNome(GE_CAT[cat])}</span>`:v.prv?`<span class="tag auto" title="Previsto = % desta linha em ${mLabel(PREV_DED[mk].ref)} × faturamento previsto do mês">${pc1(v.pct)} de ${mLabel(PREV_DED[mk].ref)}</span>`:(vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):'');
+      const tags=fc?`<span class="tag auto" title="Valor do fechamento do mês; clique para ver por canal">${fechNome(GE_CAT[cat])}</span>`:v.prv?`<span class="tag auto" title="Previsto = ${v.doMes?'% que o custo já representa da venda realizada do próprio mês':'% desta linha em '+mLabel(PREV_DED[mk].ref)} × faturamento previsto do mês">${pc1(v.pct)} ${v.doMes?'do próprio mês':'de '+mLabel(PREV_DED[mk].ref)}</span>`:(vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):'');
       const nLines=((M.lines[cat+'\u0001'+mk])||[]).length;
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true">
         <td class="catcol">${vc&&vc.manual&&!fc&&!v.prv?'':`<span class="arrow">▶</span>`}${E(cat)}${tags}${nLines?`<span class="tag">${nLines} lanç.</span>`:''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
@@ -1255,7 +1257,7 @@ function renderMes(){
           if(!fc.length) h+=`<tr class="con"><td class="catcol">— sem valor ${ST.canal?'neste canal':'neste mês'}</td><td colspan="7"></td></tr>`;
           for(const x of fc) h+=`<tr class="con"><td class="catcol">${E(x.c)}</td><td class="num">${mny2(x.v)}</td><td class="num prev"></td><td class="num">${mny2(x.v)}</td><td class="num mut" title="% sobre a venda do próprio canal">${x.venda?pc1(x.v/x.venda):''}</td><td colspan="3"></td></tr>`;
         }
-        else if(v.prv&&vc) h+=`<tr class="con"><td class="catcol">Previsão: ${pc1(v.pct)} (peso desta linha em ${mLabel(PREV_DED[mk].ref)}) × faturamento previsto de ${mLabel(mk)} (R$ ${nf(fatBase(mk))})${vc.auto?'. Realizado: itens vendidos × custo médio.':'.'}</td><td colspan="7"></td></tr>`;
+        else if(v.prv&&vc) h+=`<tr class="con"><td class="catcol">Previsão: ${pc1(v.pct)} (${v.doMes?'custo realizado ÷ venda realizada do próprio mês':'peso desta linha em '+mLabel(PREV_DED[mk].ref)}) × faturamento previsto de ${mLabel(mk)} (R$ ${nf(fatBase(mk))})${vc.auto?'. Realizado: itens vendidos × custo médio.':'.'}</td><td colspan="7"></td></tr>`;
         else if(vc&&vc.auto) h+=`<tr class="con"><td class="catcol">Calculado automaticamente: itens dos pedidos válidos do mês × custo médio do produto (sem lançamentos individuais).</td><td colspan="7"></td></tr>`;
         else {
           const lines=((M.lines[cat+'\u0001'+mk])||[]).slice().sort(lineSorter(ST.sort));
