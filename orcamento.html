@@ -422,19 +422,54 @@ const VC = { // categorias virtuais (não vêm das contas a pagar)
   'Custos dos produtos':{auto:true},
   'Frete Entrada':{manual:true}, 'Comissões':{manual:true}, 'Custos Marketplaces':{manual:true},
   'Outros Custos / Créditos':{manual:true},
-  'Rebate de comissão':{manual:true}, 'Frete marketplace':{manual:true}, 'Rebate de frete':{manual:true}
+  'Rebate de comissão':{manual:true}, 'Frete marketplace':{manual:true}, 'Rebate de frete':{manual:true},
+  'Publicidade (Ads)':{manual:true}, 'Cupons do vendedor':{manual:true}, 'Taxas e serviços do canal':{manual:true},
+  'Devoluções e mediações':{manual:true}, 'Créditos e ressarcimentos':{manual:true}, 'DIFAL retido pelo canal':{manual:true}
 };
 /* Fechamento da GE Finance por mês e canal (pedidos sem Cancelado e sem Devolução; impostos da GE desconsiderados).
    v = venda total (produtos + frete pago pelo cliente) · c = custo dos produtos · com = comissão · rc = rebate de comissão
-   fr = frete pago pela loja (marketplace) · rf = rebate do frete. Nos meses com fechamento, esses valores substituem
-   o faturamento do Tiny e as linhas de custo/comissão/frete marketplace em Deduções de vendas. */
+   fr = frete cobrado pelo próprio marketplace (Mercado Envios, Shopee Xpress, FBA) · rf = rebate do frete
+   ft = frete de transportadora própria apontado pela GE (NÃO entra como custo: essas transportadoras já estão no Tiny em
+        Fretes > Frete Venda; serve só para ratear o Frete Venda entre os canais no filtro por canal).
+   Nos meses com fechamento, esses valores substituem o faturamento do Tiny e as linhas de custo/comissão/frete marketplace
+   em Deduções de vendas. */
 const GE_FECH = {
-  '10/2026': {fonte:'GE Finance · fechamento 27/11/2026', canais:{"Mercado Livre":{"v":3214547.23,"c":2104252.35,"com":270516.37,"rc":0.0,"fr":336159.63,"rf":0.0,"n":2151},"Shopee":{"v":822697.32,"c":532147.99,"com":150632.95,"rc":78487.74,"fr":95597.02,"rf":19850.46,"n":762},"Amazon":{"v":925732.63,"c":672749.16,"com":80061.67,"rc":0.0,"fr":119816.71,"rf":84167.0,"n":626},"Magazine Luiza":{"v":512163.15,"c":326445.54,"com":77725.45,"rc":25624.54,"fr":59596.72,"rf":0.0,"n":359},"Casas Bahia":{"v":487840.05,"c":316658.18,"com":51159.07,"rc":782.31,"fr":54493.02,"rf":0.0,"n":347},"Outros":{"v":64949.82,"c":50166.43,"com":0.0,"rc":0.0,"fr":6309.51,"rf":0.0,"n":50}}}
+  '10/2026': {fonte:'GE Finance · fechamento 27/11/2026', canais:{
+    "Mercado Livre":{"v":3214547.23,"c":2104252.35,"com":270516.37,"rc":0.0,"fr":300192.45,"ft":35967.18,"rf":0.0,"n":2151},
+    "Shopee":{"v":822697.32,"c":532147.99,"com":150632.95,"rc":78487.74,"fr":1071.87,"ft":94525.15,"rf":19850.46,"n":762},
+    "Amazon":{"v":925732.63,"c":672749.16,"com":80061.67,"rc":0.0,"fr":139.80,"ft":119676.91,"rf":84167.0,"n":626},
+    "Magazine Luiza":{"v":512163.15,"c":326445.54,"com":77725.45,"rc":25624.54,"fr":0.0,"ft":59596.72,"rf":0.0,"n":359},
+    "Casas Bahia":{"v":487840.05,"c":316658.18,"com":51159.07,"rc":782.31,"fr":0.0,"ft":54493.02,"rf":0.0,"n":347},
+    "Outros":{"v":64949.82,"c":50166.43,"com":0.0,"rc":0.0,"fr":0.0,"ft":6309.51,"rf":0.0,"n":50}}}
 };
-const GE_CAT = {'Custos dos produtos':'c','Comissões':'com','Rebate de comissão':'rc','Frete marketplace':'fr','Rebate de frete':'rf'};
-const GE_SIGN = {rc:-1, rf:-1};
+/* Custos do Koncili por mês e canal que vão ALÉM do que a GE já traz (comissão e frete do pedido ficam na GE).
+   ka = publicidade (Product Ads, Amazon Ads, recarga de ADS) · kc = cupons custeados pelo vendedor · kt = taxas e serviços do canal
+   kd = devoluções e mediações · kr = créditos e ressarcimentos (abatem o custo) · kf = DIFAL retido pelo canal.
+   Valores pelo repasse; ficam no grupo "Koncili", dentro de Deduções de vendas. */
+const KONC_FECH = {
+  '10/2026': {fonte:'Koncili · relatório de lançamentos 27/11/2026', canais:{
+    "Mercado Livre":{"ka":64341.64,"kc":0,"kt":99.00,"kd":3489.95,"kr":20436.33,"kf":10552.25},
+    "Shopee":{"ka":10000.00,"kc":43397.18,"kt":0,"kd":9.80,"kr":14658.97,"kf":0},
+    "Amazon":{"ka":7262.08,"kc":0,"kt":7947.97,"kd":346.73,"kr":823.54,"kf":647.06},
+    "Magazine Luiza":{"ka":0,"kc":0,"kt":2000.00,"kd":0,"kr":366.00,"kf":0},
+    "Casas Bahia":{"ka":0,"kc":0,"kt":0,"kd":0,"kr":0,"kf":0},
+    "Outros":{"ka":0,"kc":0,"kt":0,"kd":0,"kr":0,"kf":0}}}
+};
+const KONC_CATS = ['Publicidade (Ads)','Cupons do vendedor','Taxas e serviços do canal','Devoluções e mediações','Créditos e ressarcimentos','DIFAL retido pelo canal'];
+const GE_CAT = {'Custos dos produtos':'c','Comissões':'com','Rebate de comissão':'rc','Frete marketplace':'fr','Rebate de frete':'rf',
+  'Publicidade (Ads)':'ka','Cupons do vendedor':'kc','Taxas e serviços do canal':'kt','Devoluções e mediações':'kd','Créditos e ressarcimentos':'kr','DIFAL retido pelo canal':'kf'};
+const GE_SIGN = {rc:-1, rf:-1, kr:-1};
+const KONC_K = new Set(['ka','kc','kt','kd','kr','kf']);
 const geMes = mk => GE_FECH[mk]||null;
-function geVal(mk,k){ const g=geMes(mk); if(!g) return 0; const cs=ST.canal?[ST.canal]:Object.keys(g.canais); return cs.reduce((s,c)=>s+((g.canais[c]||{})[k]||0),0); }
+const fechDe = (mk,k) => (KONC_K.has(k) ? KONC_FECH : GE_FECH)[mk] || null;   // fechamento que alimenta a chave (GE ou Koncili)
+const fechNome = k => KONC_K.has(k) ? 'KONCILI' : 'GE FINANCE';
+function geVal(mk,k){ const g=fechDe(mk,k); if(!g) return 0; const cs=ST.canal?[ST.canal]:Object.keys(g.canais); return cs.reduce((s,c)=>s+((g.canais[c]||{})[k]||0),0); }
+/* valor da categoria em cada canal no fechamento do mês (abre dentro da linha); com canal filtrado, só o canal */
+function fechCanais(cat,mk){ const k=GE_CAT[cat], g=k&&fechDe(mk,k); if(!g) return null; const sg=GE_SIGN[k]||1; const ge=geMes(mk);
+  return Object.keys(g.canais).filter(c=>!ST.canal||c===ST.canal).map(c=>({c,v:sg*((g.canais[c]||{})[k]||0),venda:ge?((ge.canais[c]||{}).v||0):0}))
+    .filter(x=>Math.abs(x.v)>0.005).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v)); }
+const fechCanaisMeses = (cat,mks) => { const s=new Map(); for(const mk of mks) for(const x of (fechCanais(cat,mk)||[])) s.set(x.c,(s.get(x.c)||0)+Math.abs(x.v)); return [...s.entries()].sort((a,b)=>b[1]-a[1]).map(x=>x[0]); };
+const fechCanalVal = (cat,mk,c) => { const x=(fechCanais(cat,mk)||[]).find(y=>y.c===c); return x?x.v:null; };
 /* venda do mês no filtro atual (todos os canais ou um canal) */
 function vendaMes(mk){
   const v=(STATE.vendas||{})[mk]||{r:0,p:0,m:0}; const ge=geMes(mk);
@@ -451,10 +486,13 @@ function shareCanal(mk){
   const tot=past?(v.r||0):Math.max(v.r||0,v.p||v.m||0), cn=past?(vc.r||0):Math.max(vc.r||0,vc.p||0);
   return tot ? cn/tot : 0;
 }
+/* fatia do canal no frete de transportadora própria (GE): rateia o Frete Venda do Tiny quando um canal está filtrado */
+function shareFrete(mk){ const g=geMes(mk); if(!g||!ST.canal) return null; const t=Object.values(g.canais).reduce((s,c)=>s+(c.ft||0),0); return t>0 ? ((g.canais[ST.canal]||{}).ft||0)/t : null; }
 function canaisDisponiveis(){ const s=new Set(Object.keys(STATE.vendasCanal||{})); for(const g of Object.values(GE_FECH)) for(const c of Object.keys(g.canais)) s.add(c); return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR')); }
 const SEED = [
   {id:'g_rec',nome:'Receitas complementares',tipo:'receita',cats:['Frete Entrada']},
   {id:'g_ded',nome:'Deduções da venda',tipo:'deducao',cats:['Impostos Vendas','Frete Transporte','Frete Transporte(nao usar)','Custos dos produtos','Comissões','Rebate de comissão','Frete marketplace','Rebate de frete','Custos Marketplaces']},
+  {id:'g_konc',nome:'Koncili',tipo:'deducao',cats:['Publicidade (Ads)','Cupons do vendedor','Taxas e serviços do canal','Devoluções e mediações','Créditos e ressarcimentos','DIFAL retido pelo canal']},
   {id:'g_pes',nome:'Pessoal',tipo:'despesa',cats:['Salario Funcionarios','Decimo Terceiro','Encargos Trabalhistas','Recisoes','Custos de Ferias','Custos Ferias','Vale Alimentacao','Vale Transporte','Plano de Saude','Previdencia','Confraternizacao']},
   {id:'g_soc',nome:'Retirada de sócios',tipo:'despesa',cats:['Retirada Socios','Beneficios Socios']},
   {id:'g_gal',nome:'Galpão',tipo:'despesa',cats:['Aluguel Galpao','Agua e Luz Galpao','Internet Galpao','Manutencao Galpao','Monitoramento Galpao','Seguro Galpao','Servicos Gerais Galpao','Supermercado Galpao','Insumos Galpao','Outros Galpao','Brindes Galpao','Centro Logistico','Viagem Galpao','Papelaria Galpao','Prestacao de Servico Galpao']},
@@ -560,7 +598,18 @@ async function garantirCatsExtras(){
   }
   if(mud) await saveCfg();
 }
-async function loadCfg(){ await loadCfg0(); await garantirCatsExtras(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); await garantirOurocap(); }
+/* grupo "Koncili" (Deduções de vendas): custos dos canais que só o Koncili traz. Criado uma vez, logo abaixo do grupo principal de deduções. */
+async function garantirKoncili(){
+  CFG.fixes=CFG.fixes||{}; if(CFG.fixes.koncili) return;
+  if(!CFG.groups.some(g=>g.id==='g_konc')){
+    const g={id:'g_konc',nome:'Koncili',tipo:'deducao',orc:{modo:'none',base:'',meses:{}}};
+    let i=CFG.groups.findIndex(x=>x.id==='g_ded'); if(i<0) i=CFG.groups.map(x=>x.tipo).lastIndexOf('deducao');
+    if(i<0) CFG.groups.unshift(g); else CFG.groups.splice(i+1,0,g);
+  }
+  for(const c of KONC_CATS) CFG.catGroup[c]='g_konc';
+  CFG.fixes.koncili=1; await saveCfg();
+}
+async function loadCfg(){ await loadCfg0(); await garantirCatsExtras(); await aplicarFixComp(); await garantirDistrib(); await garantirImportacao(); await garantirOurocap(); await garantirKoncili(); }
 async function loadCfg0(){
   const c=await stGet('orc_cfg');
   if(c && c.groups){ CFG=Object.assign(seedCfg(),c); CFG.ui=Object.assign(seedCfg().ui,c.ui||{});
@@ -892,8 +941,9 @@ function buildModel(){
 }
 function catVal(cat,mk){
   const k=GE_CAT[cat];
-  if(k && geMes(mk)) return {r:(GE_SIGN[k]||1)*geVal(mk,k),p:0,n:0,ge:true};
+  if(k && fechDe(mk,k)) return {r:(GE_SIGN[k]||1)*geVal(mk,k),p:0,n:0,ge:true};
   const x=catVal0(cat,mk); if(!ST.canal) return x;
+  if(cat==='Frete Venda'){ const f=shareFrete(mk); if(f!=null) return {r:(x.r||0)*f,p:(x.p||0)*f,n:x.n||0}; }
   if(cat==='Custos dos produtos'){ const pc=STATE.custosProdCanal||{}; let soma=0; for(const c of Object.keys(pc)) soma+=(pc[c][mk]||0);
     if(soma>0 && soma>=0.9*(x.r||0)) return {r:(pc[ST.canal]||{})[mk]||0,p:0,n:0}; }
   const f=shareCanal(mk); return {r:(x.r||0)*f,p:(x.p||0)*f,n:x.n||0};
@@ -921,8 +971,11 @@ function orcP(tp,mk,gs){ let s=0,n=0; for(const g of groupsDoPai(tp,gs)){ if(g.v
 const nGr = (tp,gs) => { const n=groupsDoPai(tp,gs).length; return n+(n===1?' grupo':' grupos'); };
 const pvR = (v,mk) => { const b=fatR(mk); return b&&v?`<span class="pv" title="% sobre a venda realizada do mês">${pc1(v/b)}</span>`:''; };
 const pvP = (v,mk) => { const b=metaV(mk); return b&&v?`<span class="pv" title="% sobre a venda prevista (meta) do mês">${pc1(v/b)}</span>`:''; };
-// Receitas complementares e Deduções de vendas: com um grupo só, a categoria pai abre direto nas categorias (sem repetir o nome)
-const flatG = (tp,gs) => (tp==='receita'||tp==='deducao'||tp==='distrib') && groupsDoPai(tp,gs).length===1;
+// Receitas complementares, Deduções de vendas e Distribuição de lucros: o grupo principal abre direto nas categorias (sem repetir o nome);
+// os outros grupos da mesma categoria pai (ex.: Koncili em Deduções de vendas) aparecem como grupo, logo abaixo.
+const FLAT_MAIN = {receita:'g_rec', deducao:'g_ded', distrib:'g_dist'};
+const flatGrp = (g,gs) => { const tp=tipoDe(g); if(!(tp in FLAT_MAIN)) return false; const l=groupsDoPai(tp,gs); return l.length===1 || (l[0]===g && g.id===FLAT_MAIN[tp]); };
+const flatG = (tp,gs) => { const l=groupsDoPai(tp,gs); return l.length>0 && flatGrp(l[0],gs); };
 const parTag = (tp,gs) => { if(flatG(tp,gs)){ const g=groupsDoPai(tp,gs)[0]; return g.virtual?'':`<span class="tag orc" data-gedit="${g.id}" title="Lançar o previsto total do grupo por mês">${(g.orc&&g.orc.modo!=='none')?'previsto do grupo':'lançar previsto do grupo'}</span>`; } return `<span class="tag">${nGr(tp,gs)}</span>`; };
 const parCollapsed = tp => !!(CFG.ui.collapsedP||{})[tp];
 const parHead = (tp,inner) => `<tr class="par t-${tp}" data-par="${tp}">${inner}</tr>`;
@@ -1126,7 +1179,7 @@ function renderMes(){
     if(tp!==curP){ curP=tp; const pa=aggP(tp,mk,gs), pp=hp?aggP(tp,pk,gs):{t:null}, po=orcP(tp,mk,gs); const pc=po?pa.t/po:null; const pov=po!=null&&pa.t>po+0.5;
       h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td><td class="num">${mny(pa.r)}${pvR(pa.r,mk)}</td><td class="num prev">${mny(pa.p)}${pvP(pa.p,mk)}</td><td class="num">${mny(pa.t,'0')}</td><td class="num">${base?pc1(pa.t/base):'—'}</td><td class="num">${mny(pp.t)}</td>${dcell(pa.t,pp.t,goodUp(tp),mk)}`); }
     if(parCollapsed(tp)) continue;
-    const flat=flatG(tp,gs), hLen=h.length;
+    const flat=flatGrp(g,gs), hLen=h.length;
     const up=goodUp(g.tipo); const a=aggG(g.id,mk), pa=hp?aggG(g.id,pk):{t:null};
     const oi=orcInfo(g,mk); const o=oi?oi.v:null;
     const collapsed=!!CFG.ui.collapsed[g.id];
@@ -1140,14 +1193,19 @@ function renderMes(){
     for(const cat of visibleCats(g.id,[mk,pk])){
       const v=catVal(cat,mk); const t=tot(v), pt=hp?tot(catVal(cat,pk)):null;
       const vc=VC[cat]; const open=ST.openCats.has(cat);
-      const tags=vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):'';
+      const fc=v.ge?fechCanais(cat,mk):null;   // mês com fechamento (GE Finance / Koncili): valor fixo, abre por canal
+      const tags=fc?`<span class="tag auto" title="Valor do fechamento do mês; clique para ver por canal">${fechNome(GE_CAT[cat])}</span>`:(vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):'');
       const nLines=((M.lines[cat+'\u0001'+mk])||[]).length;
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true">
-        <td class="catcol">${vc&&vc.manual?'':`<span class="arrow">▶</span>`}${E(cat)}${tags}${nLines?`<span class="tag">${nLines} lanç.</span>`:''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
-      if(vc&&vc.manual){ h+=manualInputs(cat,mk)+`<td class="num"><b>${mny(t,'0')}</b></td><td class="num mut">${base&&t?pc1(t/base):''}</td><td class="num mut">${mny(pt)}</td>${dcell(t,pt,up,mk)}</tr>`; continue; }
+        <td class="catcol">${vc&&vc.manual&&!fc?'':`<span class="arrow">▶</span>`}${E(cat)}${tags}${nLines?`<span class="tag">${nLines} lanç.</span>`:''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
+      if(vc&&vc.manual&&!fc){ h+=manualInputs(cat,mk)+`<td class="num"><b>${mny(t,'0')}</b></td><td class="num mut">${base&&t?pc1(t/base):''}</td><td class="num mut">${mny(pt)}</td>${dcell(t,pt,up,mk)}</tr>`; continue; }
       h+=`<td class="num">${mny(v.r)}${pcs(v.r,fatR(mk))}</td><td class="num prev${v.pd?' edt':''}"${v.pd?` title="inclui ajuste manual de previsão: ${v.pd>0?'+':''}${fmt2.format(v.pd)}"`:''}>${mny(v.p)}${pcs(v.p,fatP(mk))}</td><td class="num"><b>${mny(t,'0')}</b></td><td class="num mut">${base&&t?pc1(t/base):''}</td><td class="num mut">${mny(pt)}</td>${dcell(t,pt,up,mk)}</tr>`;
       if(open){
-        if(vc&&vc.auto) h+=`<tr class="con"><td class="catcol">Calculado automaticamente: itens dos pedidos válidos do mês × custo médio do produto (sem lançamentos individuais).</td><td colspan="7"></td></tr>`;
+        if(fc){
+          if(!fc.length) h+=`<tr class="con"><td class="catcol">— sem valor ${ST.canal?'neste canal':'neste mês'}</td><td colspan="7"></td></tr>`;
+          for(const x of fc) h+=`<tr class="con"><td class="catcol">${E(x.c)}</td><td class="num">${mny2(x.v)}</td><td class="num prev"></td><td class="num">${mny2(x.v)}</td><td class="num mut" title="% sobre a venda do próprio canal">${x.venda?pc1(x.v/x.venda):''}</td><td colspan="3"></td></tr>`;
+        }
+        else if(vc&&vc.auto) h+=`<tr class="con"><td class="catcol">Calculado automaticamente: itens dos pedidos válidos do mês × custo médio do produto (sem lançamentos individuais).</td><td colspan="7"></td></tr>`;
         else {
           const lines=((M.lines[cat+'\u0001'+mk])||[]).slice().sort(lineSorter(ST.sort));
           if(!lines.length) h+=`<tr class="con"><td class="catcol">— sem lançamentos nesta competência</td><td colspan="7"></td></tr>`;
@@ -1229,7 +1287,7 @@ function renderComp(){
     const tp=tipoDe(g);
     if(tp!==curP){ curP=tp; h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td>${parCells(tp)}`); }
     if(parCollapsed(tp)) continue;
-    const flat=flatG(tp,gs), hLen=h.length;
+    const flat=flatGrp(g,gs), hLen=h.length;
     const up=goodUp(g.tipo); const collapsed=!!CFG.ui.collapsed[g.id]; const oi=orcInfo(g,months[0]||CUR);
     const tagOrc = g.virtual ? '' : `<span class="tag orc" data-gedit="${g.id}">${(g.orc&&g.orc.modo!=='none')?(g.orc.modo==='pct'?fmt1.format(pnum(g.orc.base))+'% do fat.':'previsto do grupo'):'lançar previsto do grupo'}</span>`;
     h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}</td>${cellsFor(g,null,up,'g:'+g.id)}</tr>`;
@@ -1243,9 +1301,14 @@ function renderComp(){
       const vc=VC[cat]; const open=ST.openCats.has(cat);
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true"><td class="catcol"><span class="arrow">▶</span>${E(cat)}${vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>${cellsFor(null,cat,up,'c:'+cat)}</tr>`;
       if(open){
+        for(const cn of (vc?fechCanaisMeses(cat,months):[])){
+          let s='',sum=0,n=0; for(const mk of months){ const x=fechCanalVal(cat,mk,cn); let v=x; if(kind==='p') v=x==null?null:0; else if(isPct){ const b=fatBase(mk); v=(x==null||!b)?null:x/b; }
+            s+=`<td class="num${mk===ST.focus?' focus':''}">${v==null?'':(isPct?pc1(v):mny(v))}</td>`; if(v!=null&&!isPct){ sum+=v; if(Math.abs(v)>0.005) n++; } }
+          h+=`<tr class="con"><td class="catcol">${E(cn)} <span class="tag">${fechNome(GE_CAT[cat])}</span></td>${s}${isPct?'<td></td>':`<td class="num">${mny(sum,'0')}</td><td class="num mut">${n?mny(sum/n):''}</td>`}</tr>`;
+        }
         if(vc&&vc.manual){
           for(const f of ['r','p']){
-            let s=''; for(const mk of months){ const x=((CFG.manual[cat]||{})[mk])||{}; s+=`<td class="num"><input class="cell" data-row="${E(cat)}" data-m="${mk}" data-f="${f}" value="${E(x[f]??'')}" inputmode="decimal"></td>`; }
+            let s=''; for(const mk of months){ const x=((CFG.manual[cat]||{})[mk])||{}; if(fechDe(mk,GE_CAT[cat])){ s+=`<td class="num mut" title="Mês com fechamento: o valor vem do ${fechNome(GE_CAT[cat])}">fech.</td>`; continue; } s+=`<td class="num"><input class="cell" data-row="${E(cat)}" data-m="${mk}" data-f="${f}" value="${E(x[f]??'')}" inputmode="decimal"></td>`; }
             h+=`<tr class="con"><td class="catcol">${f==='r'?'Realizado (digite os valores)':'Previsto (digite os valores)'}</td>${s}<td></td><td></td></tr>`;
           }
         } else if(vc&&vc.auto){
@@ -1318,7 +1381,7 @@ function renderTri(){
         s+=`<td class="num ms">${mny(a.r)}${pvR(a.r,mk)}</td><td class="num prev">${mny(a.p)}${pvP(a.p,mk)}</td><td class="num"><b>${mny(a.t,'0')}</b>${i?`<span class="sub">${chip(a.t,aggP(tp,months[i-1],gs).t,goodUp(tp))}</span>`:''}</td>`; });
       h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td>${s}`); }
     if(parCollapsed(tp)) continue;
-    const flat=flatG(tp,gs), hLen=h.length;
+    const flat=flatGrp(g,gs), hLen=h.length;
     const up=goodUp(g.tipo); const collapsed=!!CFG.ui.collapsed[g.id];
     const tagOrc = g.virtual ? '' : `<span class="tag orc" data-gedit="${g.id}" title="Lançar o previsto total do grupo por mês">${months.some(m=>prevGrupo(g,m)!=null)?'previsto do grupo':'lançar previsto do grupo'}</span>`;
     h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}${months.map(m=>obsOf(g,m)?`<div class="gobs">📝 ${mLabel(m)}: ${E(obsOf(g,m))}</div>`:'').join('')}</td>`;
@@ -1339,7 +1402,13 @@ function renderTri(){
       });
       h+=`</tr>`;
       if(open){
-        if(vc){ h+=`<tr class="con"><td class="catcol">${vc.auto?'Calculado automaticamente (itens vendidos × custo médio).':'Linha editável — digite os valores na visão “Mês detalhado”.'}</td><td colspan="${months.length*W}"></td></tr>`; continue; }
+        if(vc){
+          for(const cn of fechCanaisMeses(cat,months)){
+            h+=`<tr class="con"><td class="catcol">${E(cn)} <span class="tag">${fechNome(GE_CAT[cat])}</span></td>`;
+            months.forEach(mk=>{ const x=fechCanalVal(cat,mk,cn); h+=`<td class="num ms">${x==null?'':mny(x)}</td><td class="num prev"></td><td class="num">${x==null?'':mny(x,'0')}</td>`; });
+            h+=`</tr>`;
+          }
+          h+=`<tr class="con"><td class="catcol">${vc.auto?'Calculado automaticamente (itens vendidos × custo médio)'+(months.some(m=>geMes(m))?'; nos meses com fechamento, custo da GE Finance.':'.'):'Linha editável — digite os valores na visão “Mês detalhado”'+(months.some(m=>fechDe(m,GE_CAT[cat]))?'; nos meses com fechamento o valor vem do '+fechNome(GE_CAT[cat])+'.':'.')}</td><td colspan="${months.length*W}"></td></tr>`; continue; }
         const man=new Set(Object.keys(CFG.conPrev||{}).filter(k=>k.startsWith(cat+'\u0001')).map(k=>k.slice(cat.length+1)));
         const names=[...new Set([...Object.keys(M.con[cat]||{}),...man])];
         const cons=names.map(n=>({n,t:months.reduce((s,mk)=>{const x=((M.con[cat]||{})[n]||{})[mk]; return s+(x?Math.abs(x.r+x.p):0);},0)})).filter(x=>x.t>0||man.has(x.n)).sort((a,b)=>b.t-a.t);
@@ -1474,8 +1543,8 @@ function render(){
     `<span class="dot${LIVE?'':' off'}"></span>`+E((LIVE?'Ao vivo · atualizado '+STATE.geradoEm:'Dados embutidos de '+STATE.geradoEm)+' · '+STATE.metaInfo+' · atualiza às 12:00 e 23:40');
   renderAlerts();
   { const el=document.getElementById('canalNote'); const ges=Object.keys(GE_FECH).map(mLabel).join(', ');
-    if(ST.canal){ const f=shareCanal(ST.focus); el.style.display=''; el.innerHTML=`<b>Canal: ${E(ST.canal)}</b> · venda do canal; custo dos produtos, comissão, rebates e frete marketplace do canal pela GE Finance (${E(ges)}); nos outros meses, custo dos produtos pelos itens vendidos no canal; os demais custos (Tiny) entram proporcionais à venda do canal: ${pc1(f)} em ${mLabel(ST.focus)}. Os lançamentos abertos mostram o valor cheio da empresa.`; }
-    else if(ges){ el.style.display=''; el.innerHTML=`Fechamento da GE Finance em ${E(ges)}: venda, custo dos produtos, comissão, rebates e frete marketplace vêm da GE (sem cancelados, sem devoluções e sem impostos da GE).`; }
+    if(ST.canal){ const f=shareCanal(ST.focus); el.style.display=''; el.innerHTML=`<b>Canal: ${E(ST.canal)}</b> · venda do canal; custo dos produtos, comissão, rebates e frete marketplace do próprio canal pela GE Finance (${E(ges)}) e custos do grupo Koncili do próprio canal (${E(Object.keys(KONC_FECH).map(mLabel).join(', '))}); nos outros meses, custo dos produtos pelos itens vendidos no canal. Frete Venda (transportadoras, Tiny) rateado pelo frete de transportadora de cada canal na GE${shareFrete(ST.focus)!=null?': '+pc1(shareFrete(ST.focus))+' em '+mLabel(ST.focus):''}; os demais custos do Tiny entram proporcionais à venda do canal: ${pc1(f)} em ${mLabel(ST.focus)}. Os lançamentos abertos mostram o valor cheio da empresa.`; }
+    else if(ges){ el.style.display=''; el.innerHTML=`Fechamento de ${E(ges)}: venda, custo dos produtos, comissão, rebates e frete cobrado pelo marketplace vêm da GE Finance (sem cancelados, sem devoluções e sem impostos da GE). Publicidade, cupons, taxas, devoluções, créditos e DIFAL retido pelos canais vêm do Koncili (grupo Koncili). O frete de transportadora continua pelo Tiny (Fretes › Frete Venda). Abra a linha para ver o valor de cada canal, ou filtre em Canal.`; }
     else el.style.display='none'; }
   renderVendas();
   renderKPIs();
@@ -1700,7 +1769,7 @@ app.addEventListener('click',e=>{
   const pr=e.target.closest('tr.par'); if(pr){ const tp=pr.dataset.par; CFG.ui.collapsedP=CFG.ui.collapsedP||{}; CFG.ui.collapsedP[tp]=!CFG.ui.collapsedP[tp]; saveCfg(); render(); return; }
   const gr=e.target.closest('tr.grp'); if(gr){ const id=gr.dataset.gid; CFG.ui.collapsed[id]=!CFG.ui.collapsed[id]; saveCfg(); render(); return; }
   const ln=e.target.closest('tr.line'); if(ln){ const id=ln.dataset.lid; if(ST.openLines.has(id)) ST.openLines.delete(id); else ST.openLines.add(id); render(); return; }
-  const ct=e.target.closest('tr.cat'); if(ct){ const c=ct.dataset.cat; if(VC[c]&&VC[c].manual&&ST.view==='mes') return; if(ST.openCats.has(c)) ST.openCats.delete(c); else ST.openCats.add(c); render(); return; }
+  const ct=e.target.closest('tr.cat'); if(ct){ const c=ct.dataset.cat; if(VC[c]&&VC[c].manual&&ST.view==='mes'&&!catVal(c,ST.focus).ge) return; if(ST.openCats.has(c)) ST.openCats.delete(c); else ST.openCats.add(c); render(); return; }
 });
 app.addEventListener('change',e=>{
   const inp=e.target.closest('input.cell'); if(!inp) return;
@@ -1766,7 +1835,7 @@ function exportXLSX(){
   const base=fatBase(mk);
   const gsX=orderedGroups(); let curP=null;
   const exp1=(lista)=>{ for(const g of lista){
-    const tp=tipoDe(g), flat=flatG(tp,gsX);
+    const tp=tipoDe(g), flat=flatGrp(g,gsX);
     if(tp!==curP){ curP=tp; const a=aggP(tp,mk,gsX), pa=aggP(tp,pk,gsX), o=orcP(tp,mk,gsX);
       a1.push([TIPOS[tp].toUpperCase(), a.r, a.p, a.t, base?a.t/base:'', pa.t, a.t-pa.t, pa.t?(a.t-pa.t)/Math.abs(pa.t):'']); }
     const ind=flat?'   ':'      ';
@@ -1787,7 +1856,7 @@ function exportXLSX(){
   const orcLines=[];
   let curP2=null;
   for(const g of gsX){
-    const tp=tipoDe(g), flat=flatG(tp,gsX), ind=flat?'   ':'      ';
+    const tp=tipoDe(g), flat=flatGrp(g,gsX), ind=flat?'   ':'      ';
     if(tp!==curP2){ curP2=tp; const row=[TIPOS[tp].toUpperCase()]; let s=0; for(const m of months){ const t=aggP(tp,m,gsX).t; row.push(t); s+=t; } row.push(s); a2.push(row); }
     if(!flat){ const row=['   '+g.nome]; let s=0; for(const m of months){ const t=aggG(g.id,m).t; row.push(t); s+=t; } row.push(s); a2.push(row); }
     if(false){ const r2_=[ind+'orçado']; let so=0; for(const m of months){ const o=orcado(g,m); r2_.push(o==null?'':o); so+=o||0; } r2_.push(so); a2.push(r2_); }
@@ -1806,7 +1875,7 @@ function exportXLSX(){
   const dt=(y,m,d)=>(Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/864e5; /* número de série de data do Excel */ const isoD=iso=>iso?dt(+iso.slice(0,4),+iso.slice(5,7),+iso.slice(8,10)):'';
   const compD=c=>{ const [m,y]=String(c).split('/'); return dt(+y,+m,1); };
   const a4=[['Descrição','Categoria','Data de competência','Data de pagamento','Tipo de Transação','Valor']]; const r4=[];
-  const subcat=(g,c)=>{ const tp=tipoDe(g); return flatG(tp,gsX)?c:g.nome.replace(' — classificar',''); };
+  const subcat=(g,c)=>{ return flatGrp(g,gsX)?c:g.nome.replace(' — classificar',''); };
   const push4=(g,c,comp,pag,v,ord)=>{ const tp=tipoDe(g); if(tp==='fora'||Math.abs(v)<0.005) return; const ent=tp==='receita';
     r4.push({o:[TIPO_ORD.indexOf(tp),gsX.indexOf(g),mkOrd(comp),ord||''],row:[TIPOS[tp],subcat(g,c),compD(comp),pag,ent?'Entrada':'Saída',Math.round((ent?v:-v)*100)/100]}); };
   for(const l of items){ if(VC[l.ecat]) continue; const g=groupById(groupOfCat(l.ecat))||NONE_G; push4(g,l.ecat,l.ecomp,isoD(l.liq||l.venc),(l.r||0)+(l.p||0),l.liq||l.venc||''); }
