@@ -1276,7 +1276,7 @@ function renderMes(){
   // resumo
   const rs=resumoMes(mk);
   const pr=hp?resumoMes(pk):{base:null,acc:{receita:{t:null},deducao:{t:null},despesa:{t:null},financeiro:{t:null},distrib:{t:null},fora:{t:null}},margem:{t:null},oper:{t:null},res:{t:null},apos:{t:null},aj:null};
-  const sumRow=(label,r,t,pt,up,cls='',pctv=true)=>`<tr class="sum ${cls}"><td class="catcol">${label}</td><td class="num">${r==null?'':mny(r,'0')}</td><td class="num prev"></td><td class="num">${mny(t,'0')}</td><td class="num">${pctv&&rs.base?pc1(t/rs.base):''}</td><td class="num" style="opacity:.75">${mny(pt)}</td>${dcell(t,pt,up)}</tr>`;
+  const sumRow=(label,r,t,pt,up,cls='',pctv=true)=>`<tr class="sum ${cls}"><td class="catcol">${label}</td><td class="num">${r==null?'':mny(r,'0')}${r!=null&&pctv?pcs(r,fatR(mk)):''}</td><td class="num prev">${isPast(mk)?'':(pctv?mny(t,'0')+pcs(t,rs.base):mny(metaV(mk)))}</td><td class="num">${mny(t,'0')}</td><td class="num">${pctv&&rs.base?pc1(t/rs.base):''}</td><td class="num" style="opacity:.75">${mny(pt)}</td>${dcell(t,pt,up)}</tr>`;
   h+=`<tr class="sumhead"><td class="catcol">Resultado do mês (por categoria pai)</td><td colspan="7"></td></tr>`;
   h+=sumRow('Faturamento (base)',rs.v.r,rs.base,pr.base,true,'',false);
   h+=sumRow('(+) Receitas complementares',rs.acc.receita.r,rs.acc.receita.t,pr.acc.receita.t,true);
@@ -1500,7 +1500,8 @@ function renderTri(){
     if(cls==='aj' && !R.some(r=>r.aj>0)) continue;
     h+=`<tr class="sum ${cls==='res'||cls==='big'?cls:''}"><td class="catcol">${lab}</td>`;
     R.forEach((r,i)=>{ const t=ft(r), rr=fr(r); const base=r.base;
-      h+=`<td class="num ms">${rr==null?'':mny(rr,'0')}</td><td></td><td class="num">${mny(t,'0')}${base&&!lab.startsWith('Fat')?`<span class="sub" style="opacity:.8">${pc1(t/base)}</span>`:''}${i?`<span class="sub">${chip(t,ft(R[i-1]),up)}</span>`:''}</td>`; });
+      const fat=lab.startsWith('Fat'), mkx=months[i];
+      h+=`<td class="num ms">${rr==null?'':mny(rr,'0')}${rr!=null&&!fat?pcs(rr,fatR(mkx)):''}</td><td class="num prev">${isPast(mkx)?'':(fat?mny(metaV(mkx)):mny(t,'0')+pcs(t,base))}</td><td class="num">${mny(t,'0')}${base&&!lab.startsWith('Fat')?`<span class="sub" style="opacity:.8">${pc1(t/base)}</span>`:''}${i?`<span class="sub">${chip(t,ft(R[i-1]),up)}</span>`:''}</td>`; });
     h+=`</tr>`;
   }
   const gsF=gs.filter(g=>tipoDe(g)==='fora'); if(gsF.length){ h+=`<tr class="spc-fora"><td class="catcol" title="Fora do resultado: não entra no resultado projetado"></td><td colspan="${months.length*W}"></td></tr>`; loopG(gsF); }
