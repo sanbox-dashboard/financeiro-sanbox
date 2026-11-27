@@ -275,6 +275,7 @@
   .tri thead tr.vrow th{background:#1A1F2E!important; color:rgba(255,255,255,.72); border-color:#1A1F2E;}
   .tri thead tr.vrow th b{color:#fff;} .tri thead tr.vrow th.vlab{color:#fff; font-weight:900; text-transform:uppercase; letter-spacing:.5px; font-size:12px; text-align:left; border-left:5px solid var(--good);} .tri thead tr.vrow .vsep{color:rgba(255,255,255,.3);}
   .tri thead tr.vrow b.vpc.g{color:#4ADE80;} .tri thead tr.vrow b.vpc.r{color:#F87171;}
+  table.semtot tr>*:nth-child(4){display:none;}  /* Mês detalhado: Previsto já é a projeção do mês; a coluna Total não aparece */
   tr.vend td{background:#1A1F2E!important; color:#fff; font-weight:800; border-top:2px solid #1A1F2E;}
   tr.vend td.catcol{border-left:5px solid var(--good); text-transform:uppercase; letter-spacing:.5px; font-weight:900;}
   tr.vend td.prev{color:rgba(255,255,255,.75);} tr.vend .arrow{color:#fff;}
@@ -1042,13 +1043,13 @@ function prevGrupo(g,mk){
   const val=has?pnum(ov):pnum(o.base);
   return o.modo==='pct' ? fatBase(mk)*val/100 : val;
 }
-/* valor mostrado na coluna Previsto: nas linhas projetadas por % (mês em andamento) é a projeção inteira do mês, como na linha de Vendas;
-   nas demais, o que ainda está em aberto. O Total não muda (projeção, ou realizado + em aberto). */
-const dpv = v => v.prv ? (v.r||0)+(v.p||0) : (v.p||0);
+/* Coluna Previsto = projeção do mês inteiro (realizado + o que falta), em todas as linhas, como na linha de Vendas.
+   No "3 meses lado a lado" a coluna do meio ("A realizar") mostra só o que falta e é onde se digita a previsão por contato. */
+const dpv = v => (v.r||0)+(v.p||0);
 function aggG(gid,mk,raw){
   let r=0,p=0,d=0; for(const c of BUCKET[gid]||[]){ const v=catVal(c,mk); r+=v.r; p+=v.p; d+=dpv(v); }
-  if(!raw){ const pg=prevGrupo(groupById(gid),mk); if(pg!=null){ const pp=Math.max(0,pg-r); return {r,p:pp,dp:pp,t:r+pp,ov:true,pl:p,pg}; } }
-  return {r,p,dp:d,t:r+p};
+  if(!raw){ const pg=prevGrupo(groupById(gid),mk); if(pg!=null){ const pp=Math.max(0,pg-r); return {r,p:pp,dp:r+pp,t:r+pp,ov:true,pl:p,pg}; } }
+  return {r,p,dp:r+p,t:r+p};
 }
 const gpTag = a => a&&a.ov ? `<span class="sub gpv" title="Previsto total do grupo digitado (${fmt0.format(a.pg)}) − realizado. A previsão lançamento a lançamento (${fmt0.format(a.pl)}) é ignorada neste mês.">✎ total do grupo</span>` : '';
 const gpTitle = (g,mk) => g.virtual ? '' : ` data-gedit="${g.id}" data-gmk="${mk}" title="Clique para lançar o previsto total do grupo neste mês"`;
@@ -1217,7 +1218,7 @@ function lineRowMes(l,pk,base,up,hp){
   const single=cur&&cur.n===1;
   const meta=[sitBadge(l), l.doc?`<span>doc ${E(l.doc)}</span>`:'', parcTxt(l)?`<span>${parcTxt(l)}</span>`:''].filter(Boolean).join('');
   let h=`<tr class="line${open?' open':''}" data-lid="${E(l.id)}"><td class="catcol"><div class="lt">${E(l.nome)}${l.moved?'<span class="mv" title="Lançamento movido">⇄</span>':''}</div><div class="ls" title="${E(l.hist)}">${E(short(l.hist,90))}</div><div class="lm">${meta}</div></td>
-    <td class="num">${mny2(l.r)}</td><td class="num prev">${mny2(l.p)}</td><td class="num">${mny2(t)}</td>
+    <td class="num">${mny2(l.r)}</td><td class="num prev">${mny2((l.r||0)+(l.p||0))}</td><td class="num">${mny2(t)}</td>
     <td class="num mut">${base?pc1(t/base):''}</td>
     <td class="num mut" title="Total deste contato em ${prevMk(l.ecomp)} (nesta categoria)">${prv?mny2(prevT):''}</td>`;
   h+= single ? dcell(t,prevT,up,l.ecomp) : `<td></td><td></td>`;
@@ -1232,7 +1233,7 @@ function manualInputs(cat,mk){
 function renderMes(){
   const mk=ST.focus, pk=prevMk(mk), base=fatBase(mk); const hp=mkOrd(pk)>='202601';
   const gs=orderedGroups();
-  let h=`<table><thead><tr><th class="catcol">${mLong(mk)} — realizado × previsto${isPast(mk)?'':'<div style="font-size:11px;font-weight:400;color:var(--mut)">mês em andamento: compara só o que já foi lançado até agora</div>'}</th><th>Realizado</th><th class="prev">Previsto</th><th>Total</th><th>% s/ fat.</th><th>${hp?mLabel(pk):'mês ant.'}</th><th>Δ R$</th><th>Δ %</th></tr></thead><tbody>`;
+  let h=`<table class="semtot"><thead><tr><th class="catcol">${mLong(mk)} — realizado × previsto${isPast(mk)?'':'<div style="font-size:11px;font-weight:400;color:var(--mut)">mês em andamento: compara só o que já foi lançado até agora</div>'}</th><th>Realizado</th><th class="prev">Previsto</th><th>Total</th><th>% s/ fat.</th><th>${hp?mLabel(pk):'mês ant.'}</th><th>Δ R$</th><th>Δ %</th></tr></thead><tbody>`;
   h+=vendasRowsMes(mk,pk,hp);
   const loopG=(gs)=>{ let curP=null;
   for(const g of gs){
@@ -1282,7 +1283,7 @@ function renderMes(){
   // resumo
   const rs=resumoMes(mk);
   const pr=hp?resumoMes(pk):{base:null,acc:{receita:{t:null},deducao:{t:null},despesa:{t:null},financeiro:{t:null},distrib:{t:null},fora:{t:null}},margem:{t:null},oper:{t:null},res:{t:null},apos:{t:null},aj:null};
-  const sumRow=(label,r,t,pt,up,cls='',pctv=true)=>`<tr class="sum ${cls}"><td class="catcol">${label}</td><td class="num">${r==null?'':mny(r,'0')}${r!=null&&pctv?pcs(r,fatR(mk)):''}</td><td class="num prev">${isPast(mk)?'':(pctv?mny(t,'0')+pcs(t,rs.base):mny(metaV(mk)))}</td><td class="num">${mny(t,'0')}</td><td class="num">${pctv&&rs.base?pc1(t/rs.base):''}</td><td class="num" style="opacity:.75">${mny(pt)}</td>${dcell(t,pt,up)}</tr>`;
+  const sumRow=(label,r,t,pt,up,cls='',pctv=true)=>`<tr class="sum ${cls}"><td class="catcol">${label}</td><td class="num">${r==null?'':mny(r,'0')}${r!=null&&pctv?pcs(r,fatR(mk)):''}</td><td class="num prev">${pctv?mny(t,'0')+pcs(t,rs.base):mny(isPast(mk)?t:metaV(mk))}</td><td class="num">${mny(t,'0')}</td><td class="num">${pctv&&rs.base?pc1(t/rs.base):''}</td><td class="num" style="opacity:.75">${mny(pt)}</td>${dcell(t,pt,up)}</tr>`;
   h+=`<tr class="sumhead"><td class="catcol">Resultado do mês (por categoria pai)</td><td colspan="7"></td></tr>`;
   h+=sumRow('Faturamento (base)',rs.v.r,rs.base,pr.base,true,'',false);
   h+=sumRow('(+) Receitas complementares',rs.acc.receita.r,rs.acc.receita.t,pr.acc.receita.t,true);
@@ -1437,14 +1438,14 @@ function renderTri(){
   h+=`</tr><tr class="vrow"><th class="catcol vlab">Venda realizada <span class="vsep">·</span> prevista</th>`;
   for(const mk of months){ const mv=metaV(mk); h+=`<th colspan="${W}" class="ms vcell"><b>R$ ${nf(fatR(mk))}</b><span class="vsep">·</span><b>${mv?'R$ '+nf(mv):'—'}</b>${mv&&fatR(mk)?`<span class="vsep">·</span><b class="vpc ${fatR(mk)>=mv?'g':'r'}">${pc1(fatR(mk)/mv)}</b>`:''}</th>`; }
   h+=`</tr><tr class="sub2"><th class="catcol"></th>`;
-  for(const mk of months) h+=`<th class="ms">Realizado</th><th class="prev">Previsto</th><th>Total</th>`;
+  for(const mk of months) h+=`<th class="ms">Realizado</th><th class="prev" title="O que ainda falta acontecer no mês">A realizar</th><th title="Projeção do mês inteiro: realizado + a realizar">Previsto</th>`;
   h+=`</tr></thead><tbody>`;
   const chipT=(i,v,up,get)=>{ if(!i) return ''; const pv=get(months[i-1]); return `<span class="sub">${chip(v,pv,up)}</span>`; };
   const loopG=(gs)=>{ let curP=null;
   for(const g of gs){
     const tp=tipoDe(g);
     if(tp!==curP){ curP=tp; let s=''; months.forEach((mk,i)=>{ const a=aggP(tp,mk,gs), o=orcP(tp,mk,gs); const c=o?a.t/o:null;
-        s+=`<td class="num ms">${mny(a.r)}${pvR(a.r,mk)}</td><td class="num prev">${mny(a.dp)}${pvP(a.dp,mk)}</td><td class="num"><b>${mny(a.t,'0')}</b>${i?`<span class="sub">${chip(a.t,aggP(tp,months[i-1],gs).t,goodUp(tp))}</span>`:''}</td>`; });
+        s+=`<td class="num ms">${mny(a.r)}${pvR(a.r,mk)}</td><td class="num prev">${mny(a.p)}${pvP(a.p,mk)}</td><td class="num"><b>${mny(a.t,'0')}</b>${i?`<span class="sub">${chip(a.t,aggP(tp,months[i-1],gs).t,goodUp(tp))}</span>`:''}</td>`; });
       h+=parHead(tp,`<td class="catcol">${parName(tp)}${parTag(tp,gs)}</td>${s}`); }
     if(parCollapsed(tp)) continue;
     const flat=flatGrp(g,gs), hLen=h.length;
@@ -1453,7 +1454,7 @@ function renderTri(){
     h+=`<tr class="grp t-${g.virtual?'none':g.tipo}${collapsed?'':' open'}" data-gid="${g.id}"><td class="catcol"><span class="arrow" style="${collapsed?'':'transform:rotate(90deg)'}">▶</span><span class="gname">${E(g.nome)}</span><span class="tag">${TIPOS[g.tipo]}</span>${tagOrc}${months.map(m=>obsOf(g,m)?`<div class="gobs">📝 ${mLabel(m)}: ${E(obsOf(g,m))}</div>`:'').join('')}</td>`;
     months.forEach((mk,i)=>{
       const a=aggG(g.id,mk);
-      h+=`<td class="num ms">${mny(a.r)}${pcs(a.r,fatR(mk))}</td><td class="num prev${g.virtual?'':' clk'}"${gpTitle(g,mk)}>${mny(a.dp)}${gpTag(a)}${obsOf(g,mk)?`<span class="sub" title="${E(obsOf(g,mk))}">📝</span>`:''}${pcs(a.p,fatP(mk))}</td>
+      h+=`<td class="num ms">${mny(a.r)}${pcs(a.r,fatR(mk))}</td><td class="num prev${g.virtual?'':' clk'}"${gpTitle(g,mk)}>${mny(a.p)}${gpTag(a)}${obsOf(g,mk)?`<span class="sub" title="${E(obsOf(g,mk))}">📝</span>`:''}${pcs(a.p,fatP(mk))}</td>
         <td class="num clk" data-open="g:${g.id}" data-mk="${mk}"><b>${mny(a.t,'0')}</b>${chipT(i,a.t,up,m=>aggG(g.id,m).t)}</td>`;
     });
     h+=`</tr>`;
@@ -1463,7 +1464,7 @@ function renderTri(){
       h+=`<tr class="cat${open?' open':''}" data-cat="${E(cat)}" data-ingid="${g.id}" draggable="true"><td class="catcol"><span class="arrow">▶</span>${E(cat)}${vc?(vc.auto?'<span class="tag auto">AUTOMÁTICO</span>':'<span class="tag edit">EDITÁVEL</span>'):''}<button class="ghost" data-mvcat="${E(cat)}" title="Mover para outro grupo">↪</button></td>`;
       months.forEach((mk,i)=>{
         const v=catVal(cat,mk), t=tot(v); const b=fatBase(mk);
-        h+=`<td class="num ms">${mny(v.r)}${pcs(v.r,fatR(mk))}</td><td class="num prev${v.pd?' edt':''}"${v.pd?` title="inclui ajuste manual de previsão: ${v.pd>0?'+':''}${fmt2.format(v.pd)}"`:''}>${mny(dpv(v))}${pcs(dpv(v),fatP(mk))}</td>
+        h+=`<td class="num ms">${mny(v.r)}${pcs(v.r,fatR(mk))}</td><td class="num prev${v.pd?' edt':''}"${v.pd?` title="inclui ajuste manual de previsão: ${v.pd>0?'+':''}${fmt2.format(v.pd)}"`:''}>${mny(v.p)}${pcs(v.p,fatP(mk))}</td>
           <td class="num ${vc&&vc.auto?'':'clk'}"${vc?'':` data-open="c:${E(cat)}" data-mk="${mk}"`}><b>${mny(t,'0')}</b>${t||tot(catVal(cat,months[i-1]||mk))?chipT(i,t,up,m=>tot(catVal(cat,m))):''}</td>`;
       });
       h+=`</tr>`;
@@ -1507,7 +1508,7 @@ function renderTri(){
     h+=`<tr class="sum ${cls==='res'||cls==='big'?cls:''}"><td class="catcol">${lab}</td>`;
     R.forEach((r,i)=>{ const t=ft(r), rr=fr(r); const base=r.base;
       const fat=lab.startsWith('Fat'), mkx=months[i];
-      h+=`<td class="num ms">${rr==null?'':mny(rr,'0')}${rr!=null&&!fat?pcs(rr,fatR(mkx)):''}</td><td class="num prev">${isPast(mkx)?'':(fat?mny(metaV(mkx)):mny(t,'0')+pcs(t,base))}</td><td class="num">${mny(t,'0')}${base&&!lab.startsWith('Fat')?`<span class="sub" style="opacity:.8">${pc1(t/base)}</span>`:''}${i?`<span class="sub">${chip(t,ft(R[i-1]),up)}</span>`:''}</td>`; });
+      h+=`<td class="num ms">${rr==null?'':mny(rr,'0')}${rr!=null&&!fat?pcs(rr,fatR(mkx)):''}</td><td class="num prev">${fat||rr==null||isPast(mkx)||lab.startsWith('=')?'':mny(t-rr)}</td><td class="num">${mny(t,'0')}${base&&!lab.startsWith('Fat')?`<span class="sub" style="opacity:.8">${pc1(t/base)}</span>`:''}${i?`<span class="sub">${chip(t,ft(R[i-1]),up)}</span>`:''}</td>`; });
     h+=`</tr>`;
   }
   const gsF=gs.filter(g=>tipoDe(g)==='fora'); if(gsF.length){ h+=`<tr class="spc-fora"><td class="catcol" title="Fora do resultado: não entra no resultado projetado"></td><td colspan="${months.length*W}"></td></tr>`; loopG(gsF); }
